@@ -3,7 +3,21 @@ package main
 import (
 	"fmt"
 	"sync"
+	"time"
+
+	"go.uber.org/zap"
 )
+
+var logger *zap.Logger
+
+func initLogger() {
+	var err error
+	logger, err = zap.NewProduction()
+	if err != nil {
+		panic("failed to initialize logger: " + err.Error())
+	}
+	defer logger.Sync() // Flushes buffer, if any
+}
 
 const _directionUp = "up"
 const _directionDown = "down"
@@ -11,98 +25,152 @@ const _directionDown = "down"
 // ***************************************************************************
 
 type Destinations struct {
-	up   map[int]int
-	down map[int]int
+	up   map[int][]int
+	down map[int][]int
 	mu   sync.RWMutex
 }
 
 func NewDestinations() *Destinations {
 	return &Destinations{
-		up:   make(map[int]int),
-		down: make(map[int]int),
+		up:   make(map[int][]int),
+		down: make(map[int][]int),
 	}
 }
 
-func (d *Destinations) isUpEmpty() bool {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	for _, val := range d.up {
-		if val == 1 {
-			return false
-		}
+func (d *Destinations) Append(direction string, fromFloor, toFloor int) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if direction == _directionUp {
+		d.up[fromFloor] = append(d.up[fromFloor], toFloor)
+		return
 	}
-	return true
+
+	if direction == _directionDown {
+		d.down[fromFloor] = append(d.down[fromFloor], toFloor)
+	}
 }
 
-func (d *Destinations) isDownEmpty() bool {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	for _, val := range d.down {
-		if val == 1 {
-			return false
+func (d *Destinations) Flush(direction string, fromFloor int) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if direction == _directionUp {
+		if len(d.up[fromFloor]) > 0 {
+			for _, floor := range d.up[fromFloor] {
+				if _, exists := d.up[floor]; !exists {
+					d.up[floor] = make([]int, 0)
+				}
+			}
+
 		}
+
+		delete(d.up, fromFloor)
 	}
-	return true
+
+}
+
+func (d *Destinations) isUpExisting() bool {
+	d.mu.RLock()
+	existing := len(d.up) > 0
+	d.mu.RUnlock()
+	return existing
+}
+
+func (d *Destinations) isDownExisting() bool {
+	d.mu.RLock()
+	existing := len(d.down) > 0
+	d.mu.RUnlock()
+	return existing
 }
 
 //***************************************************************************
 
 type Elevator struct {
+	name         string
 	maxFloor     int
 	minFloor     int
 	currentFloor int
 	direction    string
 	mu           sync.RWMutex
-	moving       bool
 	destinations *Destinations
+	switchOnChan chan byte // Channel for status updates
 }
 
-func NewElevator(destinations *Destinations) *Elevator {
-	return &Elevator{
+func NewElevator(name string) *Elevator {
+	e := &Elevator{
+		name:         name,
 		maxFloor:     9,
 		minFloor:     0,
 		currentFloor: 0,
-		destinations: destinations,
+		destinations: NewDestinations(),
+		switchOnChan: make(chan byte, 10),
+	}
+
+	go e.switchOn()
+	return e
+}
+
+func (e *Elevator) switchOn() {
+	for range e.switchOnChan {
+		e.Run()
 	}
 }
 
-func (e *Elevator) Move() {
+func (e *Elevator) Run() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	if !e.moving {
-		e.moving = true
-		e.Move()
+	fmt.Printf("The elevator %s is on the %d floor\n", e.name, e.currentFloor)
+
+	if e.direction == _directionUp && e.destinations.isUpExisting() {
+		if _, exists := e.destinations.up[e.currentFloor]; exists {
+			e.openDoor()
+			e.destinations.Flush(e.direction, e.currentFloor)
+			e.closeDoor()
+
+		}
+
+		e.currentFloor++
+		e.switchOnChan <- 1
+	}
+
+	if e.direction == _directionDown && e.destinations.isDownExisting() {
+		if _, exists := e.destinations.down[e.currentFloor]; exists {
+			e.openDoor()
+			e.destinations.Flush(e.direction, e.currentFloor)
+			e.closeDoor()
+			e.currentFloor++
+			e.switchOnChan <- 1
+		}
 	}
 }
 
-func (e *Elevator) isMoving() bool {
-	e.mu.RLock()
-	moving := e.moving
-	e.mu.RUnlock()
-	return moving
+func (e *Elevator) openDoor() {
+	fmt.Printf("Elevator %s opened the doors at floor %d\n", e.name, e.currentFloor)
 }
 
-// if current direction is empty
-func (e *Elevator) Request() {
-	if e.isMoving() {
-		return
-	}
+func (e *Elevator) closeDoor() {
+	fmt.Printf("Elevator %s closed the doors at floor %d\n", e.name, e.currentFloor)
+}
 
+// Append the request to the elevator regardless of the current direction if `must` is `true`.
+// If the direction is empty, set the requested direction.
+// If the current direction is opposite, reject the request.
+func (e *Elevator) Request(direction string, fromFloor, toFloor int, must bool) bool {
 	currentDirection := e.GetDirection()
 
-	if currentDirection != "" {
-		return
+	if !must && currentDirection != "" && currentDirection != direction {
+		return false
 	}
 
-	if !e.destinations.isUpEmpty() {
-		e.SetDirection(_directionUp)
-	} else if !e.destinations.isDownEmpty() {
-		e.SetDirection(_directionDown)
+	if currentDirection == "" {
+		e.SetDirection(direction)
 	}
 
-	e.Move()
-
+	e.destinations.Append(direction, fromFloor, toFloor)
+	e.switchOnChan <- 1
+	return true
 }
 
 func (e *Elevator) GetDirection() string {
@@ -120,14 +188,13 @@ func (e *Elevator) SetDirection(direction string) {
 
 // ***********************************************************************************************************
 type Manager struct {
-	destinations *Destinations
-	elevators    []*Elevator
+	mu        sync.RWMutex
+	elevators []*Elevator
 }
 
-func NewManager(destinations *Destinations) *Manager {
+func NewManager() *Manager {
 	return &Manager{
-		destinations: destinations,
-		elevators:    make([]*Elevator, 0),
+		elevators: make([]*Elevator, 0),
 	}
 }
 
@@ -135,43 +202,56 @@ func (m *Manager) AddElevator(elevator *Elevator) {
 	m.elevators = append(m.elevators, elevator)
 }
 
-func (m *Manager) RequestElevator(fromFloor, toFloor int) {
+func (m *Manager) RequestElevator(fromFloor, toFloor int) error {
 
-	m.destinations.mu.Lock()
-	if toFloor > fromFloor {
-		m.destinations.up[fromFloor] = 1
-		m.destinations.up[toFloor] = 1
-	} else if toFloor < fromFloor {
-		m.destinations.down[fromFloor] = 1
-		m.destinations.down[toFloor] = 1
+	if toFloor == fromFloor {
+		return fmt.Errorf("%d floor is equal to the same %d floor. The requested floor should be different from your floor", toFloor, fromFloor)
 	}
-	m.destinations.mu.Unlock()
-	m.Ping()
-}
 
-func (m *Manager) Ping() {
-	for _, e := range m.elevators {
-		go e.Request()
+	direction := _directionUp
+	if toFloor < fromFloor {
+		direction = _directionDown
 	}
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	approved := false
+	for _, elevator := range m.elevators {
+		approved = elevator.Request(direction, fromFloor, toFloor, false)
+	}
+
+	if !approved {
+		m.elevators[0].Request(direction, fromFloor, toFloor, true)
+	}
+
+	return nil
+
 }
 
 func main() {
-	destinations := NewDestinations()
-	manager := NewManager(destinations)
 
-	elevator1 := NewElevator(destinations)
+	initLogger()
+
+	manager := NewManager()
+
+	elevator1 := NewElevator("E1")
 	// elevator2 := NewElevator()
 
 	manager.AddElevator(elevator1)
 	// manager.AddElevator(elevator2)
 
 	// Request an elevator going from floor 1 to floor 9
-	manager.RequestElevator(1, 9)
+	if err := manager.RequestElevator(1, 9); err != nil {
+		fmt.Println(err)
+	}
 
 	// Request an elevator going from floor 3 to floor 5
-	manager.RequestElevator(3, 5)
+	if err := manager.RequestElevator(3, 5); err != nil {
+		fmt.Println(err)
+	}
 
-	fmt.Println("Elevators:", manager.elevators)
-	fmt.Println("Destinations (Up):", manager.destinations.up)
-	fmt.Println("Destinations (Down):", manager.destinations.down)
+	for {
+		time.Sleep(time.Second)
+	}
 }
