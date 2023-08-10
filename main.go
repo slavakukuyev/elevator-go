@@ -164,7 +164,7 @@ func (e *Elevator) Run() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	logger.Debug("current floor", zap.String("elevator", e.name), zap.Int("fllor", e.currentFloor))
+	logger.Debug("current floor", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
 	time.Sleep(time.Millisecond * 500)
 
 	if e.direction == _directionUp && e.destinations.isUpExisting() {
