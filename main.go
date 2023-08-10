@@ -292,12 +292,12 @@ func findSmallestKey(m map[int][]int) int {
 }
 
 func (e *Elevator) openDoor() {
-	logger.Info("Open doors", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
+	logger.Info("open doors", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
 	time.Sleep(time.Second * 2)
 }
 
 func (e *Elevator) closeDoor() {
-	logger.Info("Close doors", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
+	logger.Info("close doors", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
 }
 
 // Append the request to the elevator regardless of the current direction if `must` is `true`.
@@ -351,7 +351,7 @@ func (m *Manager) AddElevator(elevator *Elevator) {
 func (m *Manager) RequestElevator(fromFloor, toFloor int) error {
 
 	if toFloor == fromFloor {
-		return fmt.Errorf("%d floor is equal to the same %d floor. The requested floor should be different from your floor", toFloor, fromFloor)
+		return fmt.Errorf("the requested floor (%d) should be different from your floor (%d)", toFloor, fromFloor)
 	}
 
 	direction := _directionUp
