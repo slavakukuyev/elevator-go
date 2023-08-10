@@ -154,16 +154,8 @@ func (e *Elevator) closeDoor() {
 	logger.Info("close doors", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
 }
 
-// Append the request to the elevator regardless of the current direction if `must` is `true`.
-// If the direction is empty, set the requested direction.
-// If the current direction is opposite, reject the request.
-func (e *Elevator) Request(direction string, fromFloor, toFloor int, must bool) bool {
+func (e *Elevator) Request(direction string, fromFloor, toFloor int) bool {
 	currentDirection := e.GetDirection()
-
-	if !must && currentDirection != "" && currentDirection != direction {
-		return false
-	}
-
 	if currentDirection == "" {
 		e.SetDirection(direction)
 	}
@@ -184,4 +176,11 @@ func (e *Elevator) SetDirection(direction string) {
 	e.mu.Lock()
 	e.direction = direction
 	e.mu.Unlock()
+}
+
+func (e *Elevator) GetCurrentFloor() int {
+	e.mu.RLock()
+	currentFloor := e.currentFloor
+	e.mu.RUnlock()
+	return currentFloor
 }

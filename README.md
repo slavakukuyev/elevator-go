@@ -9,12 +9,22 @@ Golang elevator real system implementation
 * add GitHub Actions
 * add Logic of floor under 0 (parking)
 * use zap logger (done)
+* create docker image
+* create manager algorytm on base of all elevators
 
 
 current flow test:
 parameters:
 ```go
-// Request an elevator going from floor 1 to floor 9
+	manager := NewManager()
+
+	elevator1 := NewElevator("A")
+	elevator2 := NewElevator("B")
+
+	manager.AddElevator(elevator1)
+	manager.AddElevator(elevator2)
+
+	// Request an elevator going from floor 1 to floor 9
 	if err := manager.RequestElevator(1, 9); err != nil {
 		logger.Error("request elevator 1,9 error", zap.Error(err))
 	}
@@ -29,13 +39,13 @@ parameters:
 		logger.Error("request elevator 6,4 error", zap.Error(err))
 	}
 
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 7)
 
 	if err := manager.RequestElevator(1, 2); err != nil {
 		logger.Error("request elevator 1,2 error", zap.Error(err))
 	}
 
-	time.Sleep(time.Second * 15)
+	time.Sleep(time.Second * 10)
 
 	if err := manager.RequestElevator(7, 0); err != nil {
 		logger.Error("request elevator 7,0 error", zap.Error(err))
@@ -44,223 +54,65 @@ parameters:
 
 output:
 ```bash
-The elevator E1 is on the 0 floor
-The elevator E1 is on the 1 floor
-Elevator E1 opened the doors at floor 1
-Elevator E1 closed the doors at floor 1
-The elevator E1 is on the 2 floor
-The elevator E1 is on the 3 floor
-Elevator E1 opened the doors at floor 3
-Elevator E1 closed the doors at floor 3
-The elevator E1 is on the 4 floor
-The elevator E1 is on the 5 floor
-Elevator E1 opened the doors at floor 5
-Elevator E1 closed the doors at floor 5
-The elevator E1 is on the 6 floor
-The elevator E1 is on the 7 floor
-The elevator E1 is on the 8 floor
-The elevator E1 is on the 9 floor
-Elevator E1 opened the doors at floor 9
-Elevator E1 closed the doors at floor 9
-The elevator E1 is on the 9 floor
-The elevator E1 is on the 7 floor
-The elevator E1 is on the 5 floor
-The elevator E1 is on the 4 floor
-The elevator E1 is on the 3 floor
-The elevator E1 is on the 2 floor
-The elevator E1 is on the 1 floor
-The elevator E1 is on the 1 floor
-The elevator E1 is on the 1 floor
-The elevator E1 is on the 1 floor
-The elevator E1 is on the 1 floor
-Received termination signal.
-PS C:\repos\elevator-go> go run .\main.go
-The elevator E1 is on the 0 floor
-The elevator E1 is on the 1 floor
-Elevator E1 opened the doors at floor 1
-Elevator E1 closed the doors at floor 1
-The elevator E1 is on the 2 floor
-The elevator E1 is on the 3 floor
-Elevator E1 opened the doors at floor 3
-Elevator E1 closed the doors at floor 3
-The elevator E1 is on the 4 floor
-The elevator E1 is on the 5 floor
-Elevator E1 opened the doors at floor 5
-Elevator E1 closed the doors at floor 5
-The elevator E1 is on the 6 floor
-The elevator E1 is on the 7 floor
-The elevator E1 is on the 8 floor
-The elevator E1 is on the 9 floor
-Elevator E1 opened the doors at floor 9
-Elevator E1 closed the doors at floor 9
-The elevator E1 is on the 9 floor
-The elevator E1 is on the 8 floor
-The elevator E1 is on the 7 floor
-The elevator E1 is on the 6 floor
-Elevator E1 opened the doors at floor 6
-Elevator E1 closed the doors at floor 6
-The elevator E1 is on the 5 floor
-The elevator E1 is on the 4 floor
-Elevator E1 opened the doors at floor 4
-Elevator E1 closed the doors at floor 4
-The elevator E1 is on the 4 floor
-The elevator E1 is on the 3 floor
-The elevator E1 is on the 2 floor
-The elevator E1 is on the 1 floor
-The elevator E1 is on the 1 floor
-Elevator E1 opened the doors at floor 1
-Elevator E1 closed the doors at floor 1
-The elevator E1 is on the 2 floor
-The elevator E1 is on the 3 floor
-Elevator E1 opened the doors at floor 3
-Elevator E1 closed the doors at floor 3
-Received termination signal.
-PS C:\repos\elevator-go> go run .\main.go
-The elevator E1 is on the 0 floor
-The elevator E1 is on the 1 floor
-Elevator E1 opened the doors at floor 1
-Elevator E1 closed the doors at floor 1
-The elevator E1 is on the 2 floor
-The elevator E1 is on the 3 floor
-Elevator E1 opened the doors at floor 3
-Elevator E1 closed the doors at floor 3
-The elevator E1 is on the 4 floor
-The elevator E1 is on the 5 floor
-Elevator E1 opened the doors at floor 5
-Elevator E1 closed the doors at floor 5
-The elevator E1 is on the 6 floor
-The elevator E1 is on the 7 floor
-The elevator E1 is on the 8 floor
-The elevator E1 is on the 9 floor
-Elevator E1 opened the doors at floor 9
-Elevator E1 closed the doors at floor 9
-The elevator E1 is on the 9 floor
-The elevator E1 is on the 8 floor
-The elevator E1 is on the 7 floor
-The elevator E1 is on the 6 floor
-Elevator E1 opened the doors at floor 6
-Elevator E1 closed the doors at floor 6
-The elevator E1 is on the 5 floor
-The elevator E1 is on the 4 floor
-Elevator E1 opened the doors at floor 4
-Elevator E1 closed the doors at floor 4
-The elevator E1 is on the 4 floor
-The elevator E1 is on the 4 floor
-The elevator E1 is on the 4 floor
-Received termination signal.
-PS C:\repos\elevator-go> go run .\main.go
-The elevator E1 is on the 0 floor
-The elevator E1 is on the 1 floor
-Elevator E1 opened the doors at floor 1
-Elevator E1 closed the doors at floor 1
-The elevator E1 is on the 2 floor
-The elevator E1 is on the 3 floor
-Elevator E1 opened the doors at floor 3
-Elevator E1 closed the doors at floor 3
-The elevator E1 is on the 4 floor
-The elevator E1 is on the 5 floor
-Elevator E1 opened the doors at floor 5
-Elevator E1 closed the doors at floor 5
-The elevator E1 is on the 6 floor
-The elevator E1 is on the 7 floor
-The elevator E1 is on the 8 floor
-The elevator E1 is on the 9 floor
-Elevator E1 opened the doors at floor 9
-Elevator E1 closed the doors at floor 9
-The elevator E1 is on the 9 floor
-The elevator E1 is on the 8 floor
-The elevator E1 is on the 7 floor
-The elevator E1 is on the 6 floor
-Elevator E1 opened the doors at floor 6
-Elevator E1 closed the doors at floor 6
-The elevator E1 is on the 5 floor
-The elevator E1 is on the 4 floor
-Elevator E1 opened the doors at floor 4
-Elevator E1 closed the doors at floor 4
-The elevator E1 is on the 4 floor
-The elevator E1 is on the 3 floor
-The elevator E1 is on the 2 floor
-The elevator E1 is on the 1 floor
-The elevator E1 is on the 1 floor
-Elevator E1 opened the doors at floor 1
-Elevator E1 closed the doors at floor 1
-The elevator E1 is on the 2 floor
-Elevator E1 opened the doors at floor 2
-Elevator E1 closed the doors at floor 2
-The elevator E1 is on the 2 floor
-The elevator E1 is on the 3 floor
-The elevator E1 is on the 4 floor
-The elevator E1 is on the 5 floor
-The elevator E1 is on the 6 floor
-The elevator E1 is on the 7 floor
-The elevator E1 is on the 7 floor
-Elevator E1 opened the doors at floor 7
-Elevator E1 closed the doors at floor 7
-The elevator E1 is on the 6 floor
-The elevator E1 is on the 5 floor
-The elevator E1 is on the 4 floor
-The elevator E1 is on the 3 floor
-The elevator E1 is on the 2 floor
-The elevator E1 is on the 1 floor
-The elevator E1 is on the 0 floor
-Elevator E1 opened the doors at floor 0
-Elevator E1 closed the doors at floor 0
-Received termination signal.
-PS C:\repos\elevator-go> go run .\main.go
-The elevator E1 is on the 0 floor
-The elevator E1 is on the 1 floor
-Elevator E1 opened the doors at floor 1
-Elevator E1 closed the doors at floor 1
-The elevator E1 is on the 2 floor
-The elevator E1 is on the 3 floor
-Elevator E1 opened the doors at floor 3
-Elevator E1 closed the doors at floor 3
-The elevator E1 is on the 4 floor
-The elevator E1 is on the 5 floor
-Elevator E1 opened the doors at floor 5
-Elevator E1 closed the doors at floor 5
-The elevator E1 is on the 6 floor
-The elevator E1 is on the 7 floor
-The elevator E1 is on the 8 floor
-The elevator E1 is on the 9 floor
-Elevator E1 opened the doors at floor 9
-Elevator E1 closed the doors at floor 9
-The elevator E1 is on the 9 floor
-The elevator E1 is on the 8 floor
-The elevator E1 is on the 7 floor
-The elevator E1 is on the 6 floor
-Elevator E1 opened the doors at floor 6
-Elevator E1 closed the doors at floor 6
-The elevator E1 is on the 5 floor
-The elevator E1 is on the 4 floor
-Elevator E1 opened the doors at floor 4
-Elevator E1 closed the doors at floor 4
-The elevator E1 is on the 4 floor
-The elevator E1 is on the 3 floor
-The elevator E1 is on the 2 floor
-The elevator E1 is on the 1 floor
-The elevator E1 is on the 1 floor
-Elevator E1 opened the doors at floor 1
-Elevator E1 closed the doors at floor 1
-The elevator E1 is on the 2 floor
-Elevator E1 opened the doors at floor 2
-Elevator E1 closed the doors at floor 2
-The elevator E1 is on the 2 floor
-The elevator E1 is on the 3 floor
-The elevator E1 is on the 4 floor
-The elevator E1 is on the 5 floor
-The elevator E1 is on the 6 floor
-The elevator E1 is on the 7 floor
-The elevator E1 is on the 7 floor
-Elevator E1 opened the doors at floor 7
-Elevator E1 closed the doors at floor 7
-The elevator E1 is on the 6 floor
-The elevator E1 is on the 5 floor
-The elevator E1 is on the 4 floor
-The elevator E1 is on the 3 floor
-The elevator E1 is on the 2 floor
-The elevator E1 is on the 1 floor
-The elevator E1 is on the 0 floor
-Elevator E1 opened the doors at floor 0
-Elevator E1 closed the doors at floor 0
+2023-08-10T17:57:23.992+0300    debug   current floor   {"elevator": "A", "floor": 0}
+2023-08-10T17:57:23.992+0300    debug   current floor   {"elevator": "B", "floor": 0}
+2023-08-10T17:57:24.519+0300    debug   current floor   {"elevator": "B", "floor": 1}
+2023-08-10T17:57:24.519+0300    debug   current floor   {"elevator": "A", "floor": 1}
+2023-08-10T17:57:25.024+0300    info    open doors      {"elevator": "A", "floor": 1}
+2023-08-10T17:57:25.024+0300    debug   current floor   {"elevator": "B", "floor": 2}
+2023-08-10T17:57:25.531+0300    debug   current floor   {"elevator": "B", "floor": 3}
+2023-08-10T17:57:26.041+0300    info    open doors      {"elevator": "B", "floor": 3}
+2023-08-10T17:57:27.030+0300    info    close doors     {"elevator": "A", "floor": 1}
+2023-08-10T17:57:27.030+0300    debug   current floor   {"elevator": "A", "floor": 2}
+2023-08-10T17:57:27.543+0300    debug   current floor   {"elevator": "A", "floor": 3}
+2023-08-10T17:57:28.047+0300    debug   current floor   {"elevator": "A", "floor": 4}
+2023-08-10T17:57:28.047+0300    info    close doors     {"elevator": "B", "floor": 3}
+2023-08-10T17:57:28.047+0300    debug   current floor   {"elevator": "B", "floor": 4}
+2023-08-10T17:57:28.547+0300    debug   current floor   {"elevator": "B", "floor": 5}
+2023-08-10T17:57:28.547+0300    debug   current floor   {"elevator": "A", "floor": 5}
+2023-08-10T17:57:29.048+0300    debug   current floor   {"elevator": "A", "floor": 6}
+2023-08-10T17:57:29.048+0300    info    open doors      {"elevator": "B", "floor": 5}
+2023-08-10T17:57:29.565+0300    debug   current floor   {"elevator": "A", "floor": 7}
+2023-08-10T17:57:30.065+0300    debug   current floor   {"elevator": "A", "floor": 8}
+2023-08-10T17:57:30.568+0300    debug   current floor   {"elevator": "A", "floor": 9}
+2023-08-10T17:57:31.051+0300    info    close doors     {"elevator": "B", "floor": 5}
+2023-08-10T17:57:31.083+0300    info    open doors      {"elevator": "A", "floor": 9}
+2023-08-10T17:57:33.088+0300    info    close doors     {"elevator": "A", "floor": 9}
+2023-08-10T17:57:33.089+0300    debug   current floor   {"elevator": "A", "floor": 9}
+2023-08-10T17:57:33.602+0300    debug   current floor   {"elevator": "A", "floor": 8}
+2023-08-10T17:57:34.104+0300    debug   current floor   {"elevator": "A", "floor": 7}
+2023-08-10T17:57:34.620+0300    debug   current floor   {"elevator": "A", "floor": 6}
+2023-08-10T17:57:35.136+0300    info    open doors      {"elevator": "A", "floor": 6}
+2023-08-10T17:57:37.151+0300    info    close doors     {"elevator": "A", "floor": 6}
+2023-08-10T17:57:37.152+0300    debug   current floor   {"elevator": "A", "floor": 5}
+2023-08-10T17:57:37.670+0300    debug   current floor   {"elevator": "A", "floor": 4}
+2023-08-10T17:57:38.185+0300    info    open doors      {"elevator": "A", "floor": 4}
+2023-08-10T17:57:40.203+0300    info    close doors     {"elevator": "A", "floor": 4}
+2023-08-10T17:57:40.203+0300    debug   current floor   {"elevator": "A", "floor": 3}
+2023-08-10T17:57:40.719+0300    debug   current floor   {"elevator": "A", "floor": 2}
+2023-08-10T17:57:41.221+0300    debug   current floor   {"elevator": "A", "floor": 1}
+2023-08-10T17:57:41.739+0300    debug   current floor   {"elevator": "A", "floor": 1}
+2023-08-10T17:57:42.255+0300    info    open doors      {"elevator": "A", "floor": 1}
+2023-08-10T17:57:44.257+0300    info    close doors     {"elevator": "A", "floor": 1}
+2023-08-10T17:57:44.259+0300    debug   current floor   {"elevator": "A", "floor": 2}
+2023-08-10T17:57:44.775+0300    info    open doors      {"elevator": "A", "floor": 2}
+2023-08-10T17:57:46.785+0300    info    close doors     {"elevator": "A", "floor": 2}
+2023-08-10T17:57:46.786+0300    debug   current floor   {"elevator": "A", "floor": 2}
+2023-08-10T17:57:47.293+0300    debug   current floor   {"elevator": "A", "floor": 3}
+2023-08-10T17:57:47.806+0300    debug   current floor   {"elevator": "A", "floor": 4}
+2023-08-10T17:57:48.325+0300    debug   current floor   {"elevator": "A", "floor": 5}
+2023-08-10T17:57:48.839+0300    debug   current floor   {"elevator": "A", "floor": 6}
+2023-08-10T17:57:49.356+0300    debug   current floor   {"elevator": "A", "floor": 7}
+2023-08-10T17:57:49.857+0300    debug   current floor   {"elevator": "A", "floor": 7}
+2023-08-10T17:57:50.372+0300    info    open doors      {"elevator": "A", "floor": 7}
+2023-08-10T17:57:52.377+0300    info    close doors     {"elevator": "A", "floor": 7}
+2023-08-10T17:57:52.380+0300    debug   current floor   {"elevator": "A", "floor": 6}
+2023-08-10T17:57:52.890+0300    debug   current floor   {"elevator": "A", "floor": 5}
+2023-08-10T17:57:53.393+0300    debug   current floor   {"elevator": "A", "floor": 4}
+2023-08-10T17:57:53.895+0300    debug   current floor   {"elevator": "A", "floor": 3}
+2023-08-10T17:57:54.411+0300    debug   current floor   {"elevator": "A", "floor": 2}
+2023-08-10T17:57:54.925+0300    debug   current floor   {"elevator": "A", "floor": 1}
+2023-08-10T17:57:55.431+0300    debug   current floor   {"elevator": "A", "floor": 0}
+2023-08-10T17:57:55.945+0300    info    open doors      {"elevator": "A", "floor": 0}
+2023-08-10T17:57:57.947+0300    info    close doors     {"elevator": "A", "floor": 0}
 ```
