@@ -8,7 +8,7 @@ Golang elevator real system implementation
 * add logic: when first request is arrived:  the lift with  less distance to the floor will move.
 * add GitHub Actions
 * add Logic of floor under 0 (parking)
-* use zap logger
+* use zap logger (done)
 
 
 current flow test:
