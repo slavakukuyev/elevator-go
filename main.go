@@ -169,12 +169,11 @@ func (e *Elevator) Run() {
 		if e.shouldMoveUp() {
 			e.currentFloor++
 			e.switchOnChan <- 1
+			return
 		}
 
-		return
-
 	}
-	//direction up && requests are up
+	//direction down && requests are down
 	if e.direction == _directionDown && e.destinations.isDownExisting() {
 		if _, exists := e.destinations.down[e.currentFloor]; exists {
 			e.openDoor()
@@ -191,9 +190,9 @@ func (e *Elevator) Run() {
 		if e.shouldMoveDown() {
 			e.currentFloor--
 			e.switchOnChan <- 1
+			return
 		}
 
-		return
 	}
 
 	//case of elevator moving down && no more requests to move down BUT there is a request to move up on the smallest floor
@@ -411,13 +410,13 @@ func main() {
 		logger.Error("request elevator 6,4 error", zap.Error(err))
 	}
 
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 7)
 
 	if err := manager.RequestElevator(1, 2); err != nil {
 		logger.Error("request elevator 1,2 error", zap.Error(err))
 	}
 
-	time.Sleep(time.Second * 15)
+	time.Sleep(time.Second * 10)
 
 	if err := manager.RequestElevator(7, 0); err != nil {
 		logger.Error("request elevator 7,0 error", zap.Error(err))
