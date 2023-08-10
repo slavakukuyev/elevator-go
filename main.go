@@ -9,13 +9,27 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var logger *zap.Logger
 
 func initLogger() {
+	config := zap.Config{
+		Encoding:    "console", // or "json"
+		Level:       zap.NewAtomicLevelAt(zap.DebugLevel),
+		OutputPaths: []string{"stdout"},
+		EncoderConfig: zapcore.EncoderConfig{
+			LevelKey:    "level",
+			TimeKey:     "time",
+			MessageKey:  "message",
+			EncodeLevel: zapcore.LowercaseColorLevelEncoder,
+			EncodeTime:  zapcore.ISO8601TimeEncoder,
+		},
+	}
+
 	var err error
-	logger, err = zap.NewProduction()
+	logger, err = config.Build()
 	if err != nil {
 		panic("failed to initialize logger: " + err.Error())
 	}
@@ -150,7 +164,7 @@ func (e *Elevator) Run() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	fmt.Printf("The elevator %s is on the %d floor\n", e.name, e.currentFloor)
+	logger.Debug("current floor", zap.String("elevator", e.name), zap.Int("fllor", e.currentFloor))
 	time.Sleep(time.Millisecond * 500)
 
 	if e.direction == _directionUp && e.destinations.isUpExisting() {
@@ -278,12 +292,12 @@ func findSmallestKey(m map[int][]int) int {
 }
 
 func (e *Elevator) openDoor() {
-	fmt.Printf("Elevator %s opened the doors at floor %d\n", e.name, e.currentFloor)
+	logger.Info("Open doors", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
 	time.Sleep(time.Second * 2)
 }
 
 func (e *Elevator) closeDoor() {
-	fmt.Printf("Elevator %s closed the doors at floor %d\n", e.name, e.currentFloor)
+	logger.Info("Close doors", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
 }
 
 // Append the request to the elevator regardless of the current direction if `must` is `true`.
@@ -375,11 +389,9 @@ func main() {
 		for {
 			select {
 			case <-signals:
-				fmt.Println("Received termination signal.")
+				logger.Info("received termination signal.")
 				return // Exit the loop when a termination signal is received
 			default:
-				// Your main logic goes here
-				//fmt.Println("Working...")
 				time.Sleep(time.Second * 5)
 			}
 		}
@@ -422,5 +434,5 @@ func main() {
 		logger.Error("request elevator 7,0 error", zap.Error(err))
 	}
 
-	wg.Wait() // Wait until the main logic is done
+	wg.Wait() // Wait until the termination
 }
