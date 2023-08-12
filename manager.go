@@ -172,6 +172,14 @@ func elevatorsOppositeDirections(directions map[*Elevator]string, requestedDirec
 	return elevators
 }
 
+// elevatorWithMinRequestsByDirection selects an elevator with the minimum number of pending requests
+// in the specified direction from the given slice of elevators.
+// If the direction is empty, it selects the elevator with the overall minimum number of requests.
+// Parameters:
+// - elevators: A slice of elevators to choose from.
+// - direction: The requested direction ("up", "down", or empty for any direction).
+// Returns:
+// - An Elevator pointer representing the selected elevator.
 func elevatorWithMinRequestsByDirection(elevators []*Elevator, direction string) *Elevator {
 	var elevator *Elevator
 	var smallest int
