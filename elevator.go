@@ -34,7 +34,7 @@ func NewElevator(name string) *Elevator {
 
 func (e *Elevator) switchOn() {
 	for range e.switchOnChan {
-		if e.directions.isUpExisting() || e.directions.isDownExisting() {
+		if e.directions.UpDirectionLength() > 0 || e.directions.DownDirectionLength() > 0 {
 			e.Run()
 		}
 	}
@@ -47,7 +47,7 @@ func (e *Elevator) Run() {
 	logger.Debug("current floor", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
 	time.Sleep(time.Millisecond * 500)
 
-	if e.direction == _directionUp && e.directions.isUpExisting() {
+	if e.direction == _directionUp && e.directions.UpDirectionLength() > 0 {
 		if _, exists := e.directions.up[e.currentFloor]; exists {
 			e.openDoor()
 			e.directions.Flush(e.direction, e.currentFloor)
@@ -68,7 +68,7 @@ func (e *Elevator) Run() {
 
 	}
 	//direction down && requests are down
-	if e.direction == _directionDown && e.directions.isDownExisting() {
+	if e.direction == _directionDown && e.directions.DownDirectionLength() > 0 {
 		if _, exists := e.directions.down[e.currentFloor]; exists {
 			e.openDoor()
 			e.directions.Flush(e.direction, e.currentFloor)
@@ -91,7 +91,7 @@ func (e *Elevator) Run() {
 
 	//case of elevator moving down && no more requests to move down BUT there is a request to move up on the smallest floor
 	//smallest floor of the UP direction which is smaller then current floor
-	if e.direction == _directionDown && e.directions.isUpExisting() {
+	if e.direction == _directionDown && e.directions.UpDirectionLength() > 0 {
 		smallest := findSmallestKey(e.directions.up)
 		if smallest < e.currentFloor {
 			e.currentFloor--
@@ -108,7 +108,7 @@ func (e *Elevator) Run() {
 
 	//the edge case when elevator moving up && there is no more requests to move up BUT new requests are existing to movedown from the largest floor
 	//largest floor of the DOWN direction which is greater then current floor
-	if e.direction == _directionUp && e.directions.isDownExisting() {
+	if e.direction == _directionUp && e.directions.DownDirectionLength() > 0 {
 		largest := findLargestKey(e.directions.down)
 		if largest > e.currentFloor {
 			e.currentFloor++
@@ -127,7 +127,7 @@ func (e *Elevator) Run() {
 
 // check if elevator has more requests in the up direction and should continue move up
 func (e *Elevator) shouldMoveUp() bool {
-	if e.directions.isUpExisting() {
+	if e.directions.UpDirectionLength() > 0 {
 		largest := findLargestKey(e.directions.up)
 		return largest > e.currentFloor
 	}
@@ -137,7 +137,7 @@ func (e *Elevator) shouldMoveUp() bool {
 
 // check if elevator has more requests in the down direction and should continue move down
 func (e *Elevator) shouldMoveDown() bool {
-	if e.directions.isDownExisting() {
+	if e.directions.DownDirectionLength() > 0 {
 		smallest := findSmallestKey(e.directions.down)
 		return smallest < e.currentFloor
 	}
@@ -154,16 +154,8 @@ func (e *Elevator) closeDoor() {
 	logger.Info("close doors", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
 }
 
-// Append the request to the elevator regardless of the current direction if `must` is `true`.
-// If the direction is empty, set the requested direction.
-// If the current direction is opposite, reject the request.
-func (e *Elevator) Request(direction string, fromFloor, toFloor int, must bool) bool {
-	currentDirection := e.GetDirection()
-
-	if !must && currentDirection != "" && currentDirection != direction {
-		return false
-	}
-
+func (e *Elevator) Request(direction string, fromFloor, toFloor int) bool {
+	currentDirection := e.CurrentDirection()
 	if currentDirection == "" {
 		e.SetDirection(direction)
 	}
@@ -173,7 +165,7 @@ func (e *Elevator) Request(direction string, fromFloor, toFloor int, must bool) 
 	return true
 }
 
-func (e *Elevator) GetDirection() string {
+func (e *Elevator) CurrentDirection() string {
 	e.mu.RLock()
 	direction := e.direction
 	e.mu.RUnlock()
@@ -184,4 +176,18 @@ func (e *Elevator) SetDirection(direction string) {
 	e.mu.Lock()
 	e.direction = direction
 	e.mu.Unlock()
+}
+
+func (e *Elevator) CurrentFloor() int {
+	e.mu.RLock()
+	currentFloor := e.currentFloor
+	e.mu.RUnlock()
+	return currentFloor
+}
+
+func (e *Elevator) Directions() *Directions {
+	e.mu.RLock()
+	d := e.directions
+	e.mu.RUnlock()
+	return d
 }

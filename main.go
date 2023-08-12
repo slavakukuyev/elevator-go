@@ -64,11 +64,11 @@ func main() {
 
 	manager := NewManager()
 
-	elevator1 := NewElevator("E1")
-	// elevator2 := NewElevator()
+	elevator1 := NewElevator("A")
+	elevator2 := NewElevator("B")
 
 	manager.AddElevator(elevator1)
-	// manager.AddElevator(elevator2)
+	manager.AddElevator(elevator2)
 
 	// Request an elevator going from floor 1 to floor 9
 	if err := manager.RequestElevator(1, 9); err != nil {
@@ -91,9 +91,17 @@ func main() {
 		logger.Error("request elevator 1,2 error", zap.Error(err))
 	}
 
+	if err := manager.RequestElevator(7, 9); err != nil {
+		logger.Error("request elevator 1,2 error", zap.Error(err))
+	}
+
 	time.Sleep(time.Second * 10)
 
 	if err := manager.RequestElevator(7, 0); err != nil {
+		logger.Error("request elevator 7,0 error", zap.Error(err))
+	}
+
+	if err := manager.RequestElevator(3, 0); err != nil {
 		logger.Error("request elevator 7,0 error", zap.Error(err))
 	}
 
