@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"sync"
+
+	"go.uber.org/zap"
 )
 
 type Manager struct {
@@ -47,7 +49,7 @@ func (m *Manager) RequestElevator(fromFloor, toFloor int) error {
 
 	elevator := m.chooseElevator(elevators, direction, fromFloor)
 	elevator.Request(direction, fromFloor, toFloor)
-
+	logger.Info("Request has been approved", zap.String("elevator", elevator.name), zap.Int("fromFloor", fromFloor), zap.Int("toFloor", toFloor))
 	return nil
 
 }
@@ -57,20 +59,22 @@ func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection strin
 
 	//case when elevator is waiting to start
 	for _, e := range elevators {
-		d := e.GetDirection()
+		d := e.CurrentDirection()
 		if d == "" {
 			return e
 		}
 		directions[e] = d
 	}
 
-	filteredElevators := countMatchingDirections(directions, requestedDirection)
+	/******** SAME DIRECTION ********/
+
+	filteredElevators := elevatorsMatchingDirections(directions, requestedDirection)
 
 	//case when single elevator with the same direction
 	//should validate if the elevator still on his way to the floor
 	if len(filteredElevators) == 1 {
 		e := filteredElevators[0]
-		currentFloor := e.GetCurrentFloor()
+		currentFloor := e.CurrentFloor()
 
 		if (requestedDirection == _directionUp && currentFloor < fromFloor) ||
 			(requestedDirection == _directionDown && currentFloor > fromFloor) {
@@ -86,7 +90,7 @@ func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection strin
 		var nearestE *Elevator
 
 		for _, e := range filteredElevators {
-			currentFloor := e.GetCurrentFloor()
+			currentFloor := e.CurrentFloor()
 
 			if requestedDirection == _directionUp && currentFloor < fromFloor {
 				diff := fromFloor - currentFloor
@@ -109,6 +113,38 @@ func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection strin
 			return nearestE
 		}
 
+		//all the elevators in the same direction already passed the requested floor
+		//find the one with less requests in both directions for now
+		e := elevatorWithMinRequestsByDirection(elevators, "")
+		if e != nil {
+			return e
+		}
+
+	}
+	/******** OPPOSITE DIRECTION ********/
+
+	filteredElevators = elevatorsOppositeDirections(directions, requestedDirection)
+
+	//if only one found, then the previous conditions didn't work
+	//then return this single filtered elevator, because:
+	// * the other elevators already passed the floors
+	// * this one will finish its opposite direction first and then will switch to required one
+	if len(filteredElevators) == 1 {
+		return filteredElevators[0]
+	}
+
+	if len(filteredElevators) > 1 {
+		var e *Elevator
+		if requestedDirection == _directionUp {
+			e = elevatorWithMinRequestsByDirection(elevators, _directionDown)
+		} else if requestedDirection == _directionDown {
+			e = elevatorWithMinRequestsByDirection(elevators, _directionUp)
+		}
+
+		if e != nil {
+			return e
+		}
+
 	}
 
 	//default response will not stuck elevators -> at least one will work
@@ -116,7 +152,7 @@ func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection strin
 
 }
 
-func countMatchingDirections(directions map[*Elevator]string, requestedDirection string) []*Elevator {
+func elevatorsMatchingDirections(directions map[*Elevator]string, requestedDirection string) []*Elevator {
 	elevators := make([]*Elevator, 0, len(directions))
 	for e, sourceDirection := range directions {
 		if sourceDirection == requestedDirection {
@@ -124,4 +160,41 @@ func countMatchingDirections(directions map[*Elevator]string, requestedDirection
 		}
 	}
 	return elevators
+}
+
+func elevatorsOppositeDirections(directions map[*Elevator]string, requestedDirection string) []*Elevator {
+	elevators := make([]*Elevator, 0, len(directions))
+	for e, sourceDirection := range directions {
+		if sourceDirection != requestedDirection {
+			elevators = append(elevators, e)
+		}
+	}
+	return elevators
+}
+
+func elevatorWithMinRequestsByDirection(elevators []*Elevator, direction string) *Elevator {
+	var elevator *Elevator
+	var smallest int
+	var first bool = true
+
+	for _, e := range elevators {
+		directions := e.Directions()
+		l := 0
+		switch direction {
+		case _directionUp:
+			l = directions.UpDirectionLength()
+		case _directionDown:
+			l = directions.DownDirectionLength()
+		default:
+			l = directions.UpDirectionLength() + directions.DownDirectionLength()
+		}
+
+		if first || (smallest < l) {
+			smallest = l
+			elevator = e
+			first = false
+		}
+	}
+
+	return elevator
 }

@@ -91,9 +91,17 @@ func main() {
 		logger.Error("request elevator 1,2 error", zap.Error(err))
 	}
 
+	if err := manager.RequestElevator(7, 9); err != nil {
+		logger.Error("request elevator 1,2 error", zap.Error(err))
+	}
+
 	time.Sleep(time.Second * 10)
 
 	if err := manager.RequestElevator(7, 0); err != nil {
+		logger.Error("request elevator 7,0 error", zap.Error(err))
+	}
+
+	if err := manager.RequestElevator(3, 0); err != nil {
 		logger.Error("request elevator 7,0 error", zap.Error(err))
 	}
 

@@ -72,18 +72,25 @@ func (d *Directions) Flush(direction string, fromFloor int) {
 
 }
 
-func (d *Directions) isUpExisting() bool {
+func (d *Directions) UpDirectionLength() int {
 	d.mu.RLock()
-	existing := len(d.up) > 0
+	l := len(d.up)
 	d.mu.RUnlock()
-	return existing
+	return l
 }
 
-func (d *Directions) isDownExisting() bool {
+func (d *Directions) DownDirectionLength() int {
 	d.mu.RLock()
-	existing := len(d.down) > 0
+	l := len(d.down)
 	d.mu.RUnlock()
-	return existing
+	return l
+}
+
+func (d *Directions) DirectionsLength() int {
+	d.mu.RLock()
+	l := len(d.up) + len(d.down)
+	d.mu.RUnlock()
+	return l
 }
 
 func findLargestKey(m map[int][]int) int {
