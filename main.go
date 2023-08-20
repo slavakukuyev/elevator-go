@@ -53,6 +53,7 @@ func main() {
 			select {
 			case <-signals:
 				logger.Info("received termination signal.")
+				time.Sleep(5 * time.Second)
 				return // Exit the loop when a termination signal is received
 			default:
 				time.Sleep(time.Second * 5)
