@@ -7,7 +7,7 @@ Golang elevator real system implementation
 * add GitHub Actions
 * add Logic of floor under 0 (parking)
 * use zap logger (done)
-* create docker image
+* create docker image (done)
 * create manager algorytm on base of all elevators (done)
 * support min, max for each elevator separately. manager has to handle it
 
