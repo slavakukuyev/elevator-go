@@ -1,5 +1,6 @@
 # elevator-go
-Golang elevator real system implementation
+Elevator Control System
+This repository contains an Elevator Control System written in Go that simulates the operation of multiple elevators within a building.
 
 
 
