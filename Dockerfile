@@ -12,10 +12,10 @@ ENV CGO_ENABLED=0 \
 COPY go.mod go.sum /src/
 RUN go mod download
 
-COPY *.go .
+COPY . .
 
 # Build the Go application
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o elevator
+RUN GOOS=linux GOARCH=amd64 go build -o elevator
 
 # Stage 2: Create the final image using a smaller base image
 FROM alpine:3.18
@@ -29,7 +29,6 @@ RUN mkdir -p /go/bin
 # Copy the compiled binary from the build stage
 COPY --from=base /src/elevator /go/bin/
 
-
-EXPOSE 8080
+EXPOSE 1010
 # Run the Go application
 CMD ["/go/bin/elevator"]
