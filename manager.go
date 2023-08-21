@@ -32,10 +32,10 @@ func (m *Manager) AddElevator(elevator *Elevator) {
 // No direction
 // Opposite directions: the less requests in the requested direction
 
-func (m *Manager) RequestElevator(fromFloor, toFloor int) error {
+func (m *Manager) RequestElevator(fromFloor, toFloor int) (*Elevator, error) {
 
 	if toFloor == fromFloor {
-		return fmt.Errorf("the requested floor (%d) should be different from your floor (%d)", toFloor, fromFloor)
+		return nil, fmt.Errorf("the requested floor (%d) should be different from your floor (%d)", toFloor, fromFloor)
 	}
 
 	direction := _directionUp
@@ -50,7 +50,7 @@ func (m *Manager) RequestElevator(fromFloor, toFloor int) error {
 	elevator := m.chooseElevator(elevators, direction, fromFloor)
 	elevator.Request(direction, fromFloor, toFloor)
 	logger.Info("Request has been approved", zap.String("elevator", elevator.name), zap.Int("fromFloor", fromFloor), zap.Int("toFloor", toFloor))
-	return nil
+	return elevator, nil
 
 }
 

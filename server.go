@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/slavakukuyev/elevator-go/metrics"
 	"go.uber.org/zap"
 )
 
@@ -30,18 +32,32 @@ func NewServer(port int, manager *Manager) *Server {
 	}
 
 	addr := fmt.Sprintf(":%d", port)
-	s.httpServer = &http.Server{
 
+	// Create a new ServeMux to handle different routes
+	mux := http.NewServeMux()
+
+	// Register your custom handler for the "/elevator" route
+	mux.HandleFunc("/elevator", s.handler)
+
+	// Register Prometheus metrics handler for the "/metrics" route
+	mux.Handle("/metrics", promhttp.Handler())
+
+	s.httpServer = &http.Server{
 		Addr:    addr,
-		Handler: http.DefaultServeMux,
+		Handler: mux,
 	}
 
-	s.httpServer.Handler = http.HandlerFunc(s.handler)
 	return s
 }
 
 // handler is a method of Server that handles incoming requests.
 func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
+	startTime := time.Now()
+	var elevatorName string
+	defer func() {
+		requestDuration(elevatorName, startTime)
+	}()
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
@@ -55,8 +71,9 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Request an elevator going from floor 1 to floor 9
-	if err := s.manager.RequestElevator(requestBody.From, requestBody.To); err != nil {
+	// Request an elevator going from floor 0 to floor 9
+	elevator, err := s.manager.RequestElevator(requestBody.From, requestBody.To)
+	if err != nil {
 		logger.Error("request elevator error",
 			zap.Error(err),
 			zap.Int("from", requestBody.From),
@@ -67,7 +84,11 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := fmt.Sprintf("Received request: from %d to %d", requestBody.From, requestBody.To)
+	if elevator != nil {
+		elevatorName = elevator.name
+	}
+
+	response := fmt.Sprintf("Elevator %s received request: from %d to %d", elevatorName, requestBody.From, requestBody.To)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(response))
@@ -94,4 +115,11 @@ func (s *Server) Shutdown() {
 	}
 
 	os.Exit(0)
+}
+
+func requestDuration(elevatorName string, start time.Time) {
+	end := time.Now()
+	durationIMilliseconds := end.Sub(start).Milliseconds()
+	durationInSeconds := float64(durationIMilliseconds) / 1000.0
+	metrics.RequestDurationHistogram(elevatorName, durationInSeconds)
 }
