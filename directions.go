@@ -92,29 +92,3 @@ func (d *Directions) DirectionsLength() int {
 	d.mu.RUnlock()
 	return l
 }
-
-func findLargestKey(m map[int][]int) int {
-	largest := 0
-
-	for key := range m {
-		if key > largest {
-			largest = key
-		}
-	}
-
-	return largest
-}
-
-func findSmallestKey(m map[int][]int) int {
-	smallest := 0
-	first := true
-
-	for key := range m {
-		if first || key < smallest {
-			smallest = key
-			first = false
-		}
-	}
-
-	return smallest
-}
