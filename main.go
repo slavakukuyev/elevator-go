@@ -47,7 +47,7 @@ func main() {
 	manager.AddElevator(elevator1)
 	manager.AddElevator(elevator2)
 
-	port := 8080
+	port := 1010
 	server := NewServer(port, manager)
 
 	// Start the server in a separate goroutine

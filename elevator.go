@@ -25,8 +25,7 @@ func NewElevator(name string) *Elevator {
 		minFloor:     0,
 		currentFloor: 0,
 		directions:   NewDirections(),
-		// TODO: fix locking of the channel
-		switchOnChan: make(chan byte, 100),
+		switchOnChan: make(chan byte, 10),
 	}
 
 	go e.switchOn()
@@ -64,7 +63,7 @@ func (e *Elevator) Run() {
 		if e.shouldMoveUp() {
 			currentFloor++
 			e.setCurrentFloor(currentFloor)
-			e.switchOnChan <- 1
+			go e.push()
 			return
 		}
 
@@ -86,7 +85,7 @@ func (e *Elevator) Run() {
 		if e.shouldMoveDown() {
 			currentFloor--
 			e.setCurrentFloor(currentFloor)
-			e.switchOnChan <- 1
+			go e.push()
 			return
 		}
 
@@ -99,13 +98,13 @@ func (e *Elevator) Run() {
 		if smallest < currentFloor {
 			currentFloor--
 			e.setCurrentFloor(currentFloor)
-			e.switchOnChan <- 1
+			go e.push()
 			return
 		}
 
 		if smallest == currentFloor {
 			e.setDirection(_directionUp)
-			e.switchOnChan <- 1
+			go e.push()
 			return
 		}
 	}
@@ -117,13 +116,13 @@ func (e *Elevator) Run() {
 		if largest > currentFloor {
 			currentFloor++
 			e.setCurrentFloor(currentFloor)
-			e.switchOnChan <- 1
+			go e.push()
 			return
 		}
 
 		if largest == currentFloor {
 			e.setDirection(_directionDown)
-			e.switchOnChan <- 1
+			go e.push()
 			return
 		}
 	}
@@ -134,7 +133,7 @@ func (e *Elevator) Run() {
 	// there is at least one request moving up , but the elavator already above the requiested floor
 	if direction == _directionUp && e.directions.UpDirectionLength() > 0 && findLargestKey(e.directions.up) < currentFloor {
 		e.setDirection(_directionDown)
-		e.switchOnChan <- 1
+		go e.push()
 		return
 	}
 
@@ -144,7 +143,7 @@ func (e *Elevator) Run() {
 	// there is at least one request moving down , but the elavator already below the requested floor
 	if direction == _directionDown && e.directions.DownDirectionLength() > 0 && findSmallestKey(e.directions.down) > currentFloor {
 		e.setDirection(_directionUp)
-		e.switchOnChan <- 1
+		go e.push()
 		return
 	}
 }
@@ -185,7 +184,7 @@ func (e *Elevator) Request(direction string, fromFloor, toFloor int) bool {
 	}
 
 	e.directions.Append(direction, fromFloor, toFloor)
-	e.switchOnChan <- 1
+	go e.push()
 	return true
 }
 
@@ -220,6 +219,10 @@ func (e *Elevator) Directions() *Directions {
 	d := e.directions
 	e.mu.RUnlock()
 	return d
+}
+
+func (e *Elevator) push() {
+	e.switchOnChan <- 1
 }
 
 func findLargestKey(m map[int][]int) int {
