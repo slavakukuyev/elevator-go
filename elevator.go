@@ -18,11 +18,11 @@ type Elevator struct {
 	switchOnChan chan byte // Channel for status updates
 }
 
-func NewElevator(name string) *Elevator {
+func NewElevator(name string, maxFloor, minFloor int) *Elevator {
 	e := &Elevator{
 		name:         name,
-		maxFloor:     9,
-		minFloor:     0,
+		maxFloor:     maxFloor,
+		minFloor:     minFloor,
 		currentFloor: 0,
 		directions:   NewDirections(),
 		switchOnChan: make(chan byte, 10),
@@ -181,7 +181,7 @@ func (e *Elevator) closeDoor() {
 	logger.Info("close doors", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
 }
 
-func (e *Elevator) Request(direction string, fromFloor, toFloor int) bool {
+func (e *Elevator) Request(direction string, fromFloor, toFloor int) {
 	currentDirection := e.CurrentDirection()
 	if currentDirection == "" {
 		setDirection := direction
@@ -197,7 +197,6 @@ func (e *Elevator) Request(direction string, fromFloor, toFloor int) bool {
 
 	e.directions.Append(direction, fromFloor, toFloor)
 	go e.push()
-	return true
 }
 
 func (e *Elevator) CurrentDirection() string {

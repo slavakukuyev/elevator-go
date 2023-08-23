@@ -5,6 +5,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/caarlos0/env"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -33,21 +34,22 @@ func initLogger() {
 	defer logger.Sync() // Flushes buffer, if any
 }
 
-const _directionUp = "up"
-const _directionDown = "down"
-
 func main() {
+	if err := env.Parse(&cfg); err != nil {
+		panic("error on parsing env")
+	}
+
 	initLogger()
 
 	manager := NewManager()
 
-	elevator1 := NewElevator("A")
-	elevator2 := NewElevator("B")
+	elevator1 := NewElevator("A", cfg.MaxFloor, cfg.MinFloor)
+	elevator2 := NewElevator("B", cfg.MaxFloor, cfg.MinFloor)
 
 	manager.AddElevator(elevator1)
 	manager.AddElevator(elevator2)
 
-	port := 1010
+	port := cfg.Port
 	server := NewServer(port, manager)
 
 	// Start the server in a separate goroutine
