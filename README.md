@@ -13,7 +13,8 @@ This repository contains an Elevator Control System written in Go that simulates
 * support min, max for each elevator separately. manager has to handle it
 * add http server for debug different cases (done)
 * front page (not sure  with which framework)
-* investigate delay on start (why?)
+* investigate delay on start (why?) (done)
+* tests
 
 
 ## Docker
