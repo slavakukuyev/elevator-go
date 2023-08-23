@@ -45,9 +45,11 @@ func main() {
 
 	elevator1 := NewElevator("A", cfg.MaxFloor, cfg.MinFloor)
 	elevator2 := NewElevator("B", cfg.MaxFloor, cfg.MinFloor)
+	elevator3 := NewElevator("C", cfg.MaxFloor, cfg.MinFloor)
 
 	manager.AddElevator(elevator1)
 	manager.AddElevator(elevator2)
+	manager.AddElevator(elevator3)
 
 	port := cfg.Port
 	server := NewServer(port, manager)
