@@ -146,6 +146,10 @@ func (e *Elevator) Run() {
 		go e.push()
 		return
 	}
+
+	if e.directions.UpDirectionLength() == 0 && e.directions.DownDirectionLength() == 0 {
+		e.setDirection("")
+	}
 }
 
 // check if elevator has more requests in the up direction and should continue move up
@@ -180,7 +184,15 @@ func (e *Elevator) closeDoor() {
 func (e *Elevator) Request(direction string, fromFloor, toFloor int) bool {
 	currentDirection := e.CurrentDirection()
 	if currentDirection == "" {
-		e.setDirection(direction)
+		setDirection := direction
+		currentFloor := e.CurrentFloor()
+		if direction == _directionDown && currentFloor < fromFloor {
+			setDirection = _directionUp
+		} else if direction == _directionUp && currentFloor > fromFloor {
+			setDirection = _directionDown
+		}
+
+		e.setDirection(setDirection)
 	}
 
 	e.directions.Append(direction, fromFloor, toFloor)
