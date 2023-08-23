@@ -92,3 +92,33 @@ func (d *Directions) DirectionsLength() int {
 	d.mu.RUnlock()
 	return l
 }
+
+func (d *Directions) IsExisting(direction string, from, to int) bool {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	if direction == _directionUp && validateIntInMapSlice(d.up, from, to) {
+		return true
+	}
+
+	if direction == _directionDown && validateIntInMapSlice(d.down, from, to) {
+		return true
+	}
+
+	return false
+}
+
+func validateIntInMapSlice(m map[int][]int, key, value int) bool {
+	slice, exists := m[key]
+	if !exists {
+		return false
+	}
+
+	for _, v := range slice {
+		if v == value {
+			return true
+		}
+	}
+
+	return false
+}

@@ -47,11 +47,28 @@ func (m *Manager) RequestElevator(fromFloor, toFloor int) (*Elevator, error) {
 	elevators := m.elevators
 	m.mu.RUnlock()
 
-	elevator := m.chooseElevator(elevators, direction, fromFloor)
+	var elevator *Elevator
+
+	// validate existing requests
+	if elevator = requestedElevator(elevators, direction, fromFloor, toFloor); elevator != nil {
+		return elevator, nil
+	}
+
+	elevator = m.chooseElevator(elevators, direction, fromFloor)
 	elevator.Request(direction, fromFloor, toFloor)
 	logger.Info("Request has been approved", zap.String("elevator", elevator.name), zap.Int("fromFloor", fromFloor), zap.Int("toFloor", toFloor))
 	return elevator, nil
 
+}
+
+func requestedElevator(elevators []*Elevator, direction string, fromFloor, toFloor int) *Elevator {
+	for _, e := range elevators {
+		if e.directions.IsExisting(direction, fromFloor, toFloor) {
+			return e
+		}
+	}
+
+	return nil
 }
 
 func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection string, fromFloor int) *Elevator {
