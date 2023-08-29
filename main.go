@@ -45,7 +45,7 @@ func main() {
 
 	elevator1 := NewElevator("A", cfg.MaxFloor, cfg.MinFloor)
 	elevator2 := NewElevator("B", cfg.MaxFloor, cfg.MinFloor)
-	elevator3 := NewElevator("C", cfg.MaxFloor, cfg.MinFloor)
+	elevator3 := NewElevator("C", 5, -4)
 
 	manager.AddElevator(elevator1)
 	manager.AddElevator(elevator2)

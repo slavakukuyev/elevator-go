@@ -236,6 +236,12 @@ func (e *Elevator) push() {
 	e.switchOnChan <- 1
 }
 
+func (e *Elevator) IsRequestInRange(fromFloor, toFloor int) bool {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return fromFloor >= e.minFloor && fromFloor <= e.maxFloor && toFloor >= e.minFloor && toFloor <= e.maxFloor
+}
+
 func findLargestKey(m map[int][]int) int {
 	largest := 0
 
