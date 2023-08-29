@@ -24,14 +24,6 @@ func (m *Manager) AddElevator(elevator *Elevator) {
 	m.mu.Unlock()
 }
 
-// Algorithm for a  few elevators:
-// Lets assume the max and min flloors are the same
-//
-//  Unique direction (==1)  and floor is appropriate
-// Same direction: the shortest way to requested floor
-// No direction
-// Opposite directions: the less requests in the requested direction
-
 func (m *Manager) RequestElevator(fromFloor, toFloor int) (*Elevator, error) {
 
 	if toFloor == fromFloor {
@@ -54,7 +46,11 @@ func (m *Manager) RequestElevator(fromFloor, toFloor int) (*Elevator, error) {
 		return elevator, nil
 	}
 
-	elevator = m.chooseElevator(elevators, direction, fromFloor)
+	elevator = m.chooseElevator(elevators, direction, fromFloor, toFloor)
+	if elevator == nil {
+		return nil, fmt.Errorf("the requested floors (%d, %d) should be in range of existing elevators", fromFloor, toFloor)
+	}
+
 	elevator.Request(direction, fromFloor, toFloor)
 	logger.Info("Request has been approved", zap.String("elevator", elevator.name), zap.Int("fromFloor", fromFloor), zap.Int("toFloor", toFloor))
 	return elevator, nil
@@ -71,21 +67,31 @@ func requestedElevator(elevators []*Elevator, direction string, fromFloor, toFlo
 	return nil
 }
 
-func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection string, fromFloor int) *Elevator {
-	directions := make(map[*Elevator]string)
+func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection string, fromFloor, toFloor int) *Elevator {
+	elevatorsByDirection := make(map[*Elevator]string)
 
 	//case when elevator is waiting to start
 	for _, e := range elevators {
+		if !e.IsRequestInRange(fromFloor, toFloor) {
+			continue
+		}
+
 		d := e.CurrentDirection()
 		if d == "" {
 			return e
 		}
-		directions[e] = d
+
+		elevatorsByDirection[e] = d
+
+	}
+
+	if len(elevatorsByDirection) == 0 {
+		return nil
 	}
 
 	/******** SAME DIRECTION ********/
 
-	filteredElevators := elevatorsMatchingDirections(directions, requestedDirection)
+	filteredElevators := elevatorsMatchingDirections(elevatorsByDirection, requestedDirection)
 
 	//case when single elevator with the same direction
 	//should validate if the elevator still on his way to the floor
@@ -140,7 +146,7 @@ func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection strin
 	}
 	/******** OPPOSITE DIRECTION ********/
 
-	filteredElevators = elevatorsOppositeDirections(directions, requestedDirection)
+	filteredElevators = elevatorsOppositeDirections(elevatorsByDirection, requestedDirection)
 
 	//if only one found, then the previous conditions didn't work
 	//then return this single filtered elevator, because:
@@ -169,9 +175,9 @@ func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection strin
 
 }
 
-func elevatorsMatchingDirections(directions map[*Elevator]string, requestedDirection string) []*Elevator {
-	elevators := make([]*Elevator, 0, len(directions))
-	for e, sourceDirection := range directions {
+func elevatorsMatchingDirections(elevatorsByDirection map[*Elevator]string, requestedDirection string) []*Elevator {
+	elevators := make([]*Elevator, 0, len(elevatorsByDirection))
+	for e, sourceDirection := range elevatorsByDirection {
 		if sourceDirection == requestedDirection {
 			elevators = append(elevators, e)
 		}
@@ -179,9 +185,9 @@ func elevatorsMatchingDirections(directions map[*Elevator]string, requestedDirec
 	return elevators
 }
 
-func elevatorsOppositeDirections(directions map[*Elevator]string, requestedDirection string) []*Elevator {
-	elevators := make([]*Elevator, 0, len(directions))
-	for e, sourceDirection := range directions {
+func elevatorsOppositeDirections(elevatorsByDirection map[*Elevator]string, requestedDirection string) []*Elevator {
+	elevators := make([]*Elevator, 0, len(elevatorsByDirection))
+	for e, sourceDirection := range elevatorsByDirection {
 		if sourceDirection != requestedDirection {
 			elevators = append(elevators, e)
 		}

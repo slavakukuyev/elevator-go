@@ -6,11 +6,11 @@ This repository contains an Elevator Control System written in Go that simulates
 
 * create env (done)
 * add GitHub Actions
-* add Logic of floor under 0 - like parking
+* add Logic of floor under 0 like parking (done)
 * use zap logger (done)
 * create docker image (done)
 * create manager algorithm on base of all elevators (done)
-* support min, max for each elevator separately. manager has to handle it
+* add handler to creating new elevators for the system
 * add http server for debug different cases (done)
 * front page (not sure  with which framework)
 * investigate delay on start (why?) (done)
