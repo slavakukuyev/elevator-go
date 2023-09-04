@@ -14,7 +14,7 @@ This repository contains an Elevator Control System written in Go that simulates
 * add http server for debug different cases (done)
 * front page (not sure  with which framework)
 * investigate delay on start (why?) (done)
-* unit tests (done)
+* unit tests (done) https://plugins.jetbrains.com/plugin/17510-machinet-ai-gpt4--chatgpt
 
 
 ## Docker
