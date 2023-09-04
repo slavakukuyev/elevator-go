@@ -20,3 +20,7 @@ elevator
 
 # Go workspace file
 go.work
+
+.idea/
+machinet.conf
+test_output.json

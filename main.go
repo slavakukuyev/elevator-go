@@ -5,7 +5,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/caarlos0/env"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -35,17 +34,14 @@ func initLogger() {
 }
 
 func main() {
-	if err := env.Parse(&cfg); err != nil {
-		panic("error on parsing env")
-	}
-
+	initConfig()
 	initLogger()
 
 	manager := NewManager()
 
-	elevator1 := NewElevator("A", cfg.MaxFloor, cfg.MinFloor)
-	elevator2 := NewElevator("B", cfg.MaxFloor, cfg.MinFloor)
-	elevator3 := NewElevator("C", 5, -4)
+	elevator1 := NewElevator("A", cfg.MinFloor, cfg.MaxFloor, logger)
+	elevator2 := NewElevator("B", cfg.MinFloor, cfg.MaxFloor, logger)
+	elevator3 := NewElevator("C", -4, 5, logger)
 
 	manager.AddElevator(elevator1)
 	manager.AddElevator(elevator2)

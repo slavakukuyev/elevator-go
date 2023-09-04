@@ -9,23 +9,25 @@ import (
 
 type Elevator struct {
 	name         string
-	maxFloor     int
 	minFloor     int
+	maxFloor     int
 	currentFloor int
 	direction    string
 	mu           sync.RWMutex
 	directions   *Directions
 	switchOnChan chan byte // Channel for status updates
+	logger       *zap.Logger
 }
 
-func NewElevator(name string, maxFloor, minFloor int) *Elevator {
+func NewElevator(name string, minFloor, maxFloor int, logger *zap.Logger) *Elevator {
 	e := &Elevator{
 		name:         name,
-		maxFloor:     maxFloor,
 		minFloor:     minFloor,
+		maxFloor:     maxFloor,
 		currentFloor: 0,
 		directions:   NewDirections(),
 		switchOnChan: make(chan byte, 10),
+		logger:       logger,
 	}
 
 	go e.switchOn()
@@ -44,7 +46,7 @@ func (e *Elevator) Run() {
 	currentFloor := e.CurrentFloor()
 	direction := e.CurrentDirection()
 
-	logger.Debug("current floor", zap.String("elevator", e.name), zap.Int("floor", currentFloor))
+	e.logger.Debug("current floor", zap.String("elevator", e.name), zap.Int("floor", currentFloor))
 	time.Sleep(time.Millisecond * 500)
 
 	if direction == _directionUp && e.directions.UpDirectionLength() > 0 {
@@ -173,12 +175,12 @@ func (e *Elevator) shouldMoveDown() bool {
 }
 
 func (e *Elevator) openDoor() {
-	logger.Info("open doors", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
+	e.logger.Info("open doors", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
 	time.Sleep(time.Second * 2)
 }
 
 func (e *Elevator) closeDoor() {
-	logger.Info("close doors", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
+	e.logger.Info("close doors", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
 }
 
 func (e *Elevator) Request(direction string, fromFloor, toFloor int) {
