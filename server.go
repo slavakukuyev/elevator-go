@@ -17,6 +17,7 @@ import (
 type Server struct {
 	manager    *Manager
 	httpServer *http.Server
+	logger     *zap.Logger
 }
 
 // RequestBody represents the JSON request body.
@@ -26,9 +27,10 @@ type RequestBody struct {
 }
 
 // NewServer creates a new instance of Server.
-func NewServer(port int, manager *Manager) *Server {
+func NewServer(port int, manager *Manager, logger *zap.Logger) *Server {
 	s := &Server{
 		manager: manager,
+		logger:  logger.With(zap.String("module", "server")),
 	}
 
 	addr := fmt.Sprintf(":%d", port)
@@ -74,7 +76,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	// Request an elevator going from floor 0 to floor 9
 	elevator, err := s.manager.RequestElevator(requestBody.From, requestBody.To)
 	if err != nil {
-		logger.Error("request elevator error",
+		s.logger.Error("request elevator error",
 			zap.Error(err),
 			zap.Int("from", requestBody.From),
 			zap.Int("to", requestBody.To),
@@ -95,15 +97,15 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Start() {
-	logger.Info("Server started", zap.String("Addr", s.httpServer.Addr))
+	s.logger.Info("Server started", zap.String("Addr", s.httpServer.Addr))
 	err := s.httpServer.ListenAndServe()
 	if err != http.ErrServerClosed {
-		logger.Error("Server error on start", zap.Error(err))
+		s.logger.Error("Server error on start", zap.Error(err))
 	}
 }
 
 func (s *Server) Shutdown() {
-	logger.Info("Shutting down the server...")
+	s.logger.Info("Shutting down the server...")
 
 	// Create a context with timeout for graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -111,7 +113,7 @@ func (s *Server) Shutdown() {
 
 	// Shutdown the server
 	if err := s.httpServer.Shutdown(ctx); err != nil {
-		logger.Error("Server shutdown error:", zap.Error(err))
+		s.logger.Error("Server shutdown error:", zap.Error(err))
 	}
 
 	os.Exit(0)

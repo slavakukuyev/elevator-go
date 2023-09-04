@@ -10,11 +10,13 @@ import (
 type Manager struct {
 	mu        sync.RWMutex
 	elevators []*Elevator
+	logger    *zap.Logger
 }
 
-func NewManager() *Manager {
+func NewManager(logger *zap.Logger) *Manager {
 	return &Manager{
 		elevators: make([]*Elevator, 0),
+		logger:    logger,
 	}
 }
 
@@ -52,7 +54,7 @@ func (m *Manager) RequestElevator(fromFloor, toFloor int) (*Elevator, error) {
 	}
 
 	elevator.Request(direction, fromFloor, toFloor)
-	logger.Info("Request has been approved", zap.String("elevator", elevator.name), zap.Int("fromFloor", fromFloor), zap.Int("toFloor", toFloor))
+	m.logger.Info("Request has been approved", zap.String("elevator", elevator.name), zap.Int("fromFloor", fromFloor), zap.Int("toFloor", toFloor))
 	return elevator, nil
 
 }
