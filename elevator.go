@@ -8,24 +8,35 @@ import (
 )
 
 type Elevator struct {
-	name         string
-	maxFloor     int
-	minFloor     int
-	currentFloor int
-	direction    string
-	mu           sync.RWMutex
-	directions   *Directions
-	switchOnChan chan byte // Channel for status updates
+	name              string
+	minFloor          int
+	maxFloor          int
+	currentFloor      int
+	direction         string
+	mu                sync.RWMutex
+	directions        *Directions
+	switchOnChan      chan byte // Channel for status updates
+	logger            *zap.Logger
+	eachFloorDuration time.Duration
+	openDoorDuration  time.Duration
 }
 
-func NewElevator(name string, maxFloor, minFloor int) *Elevator {
+func NewElevator(name string,
+	minFloor, maxFloor int,
+	eachFloorDuration time.Duration,
+	openDoorDuration time.Duration,
+	logger *zap.Logger) *Elevator {
+
 	e := &Elevator{
-		name:         name,
-		maxFloor:     maxFloor,
-		minFloor:     minFloor,
-		currentFloor: 0,
-		directions:   NewDirections(),
-		switchOnChan: make(chan byte, 10),
+		name:              name,
+		minFloor:          minFloor,
+		maxFloor:          maxFloor,
+		currentFloor:      0,
+		directions:        NewDirections(),
+		switchOnChan:      make(chan byte, 10),
+		logger:            logger.With(zap.String("elevator", name)),
+		eachFloorDuration: eachFloorDuration,
+		openDoorDuration:  openDoorDuration,
 	}
 
 	go e.switchOn()
@@ -44,8 +55,8 @@ func (e *Elevator) Run() {
 	currentFloor := e.CurrentFloor()
 	direction := e.CurrentDirection()
 
-	logger.Debug("current floor", zap.String("elevator", e.name), zap.Int("floor", currentFloor))
-	time.Sleep(time.Millisecond * 500)
+	e.logger.Debug("current floor", zap.Int("floor", currentFloor))
+	time.Sleep(e.eachFloorDuration)
 
 	if direction == _directionUp && e.directions.UpDirectionLength() > 0 {
 		if _, exists := e.directions.up[currentFloor]; exists {
@@ -92,7 +103,7 @@ func (e *Elevator) Run() {
 	}
 
 	//case of elevator moving down && no more requests to move down BUT there is a request to move up on the smallest floor
-	//smallest floor of the UP direction which is smaller then current floor
+	//the smallest floor of the UP direction which is smaller than current floor
 	if direction == _directionDown && e.directions.UpDirectionLength() > 0 {
 		smallest := findSmallestKey(e.directions.up)
 		if smallest < currentFloor {
@@ -109,8 +120,8 @@ func (e *Elevator) Run() {
 		}
 	}
 
-	//the edge case when elevator moving up && there is no more requests to move up BUT new requests are existing to movedown from the largest floor
-	//largest floor of the DOWN direction which is greater then current floor
+	// the edge case when elevator moving up && there is no more requests to move up BUT new requests are existing to move down from the largest floor
+	// the largest floor of the DOWN direction which is greater than current floor
 	if direction == _directionUp && e.directions.DownDirectionLength() > 0 {
 		largest := findLargestKey(e.directions.down)
 		if largest > currentFloor {
@@ -128,9 +139,9 @@ func (e *Elevator) Run() {
 	}
 
 	// the edge case when elevator moving up &&
-	//  thre are no requests to move above the current floor  &&
+	//  there are no requests to move above the current floor  &&
 	// there are no requests to move down &&
-	// there is at least one request moving up , but the elavator already above the requiested floor
+	// there is at least one request moving up , but the elevator already above the requested floor
 	if direction == _directionUp && e.directions.UpDirectionLength() > 0 && findLargestKey(e.directions.up) < currentFloor {
 		e.setDirection(_directionDown)
 		go e.push()
@@ -138,9 +149,9 @@ func (e *Elevator) Run() {
 	}
 
 	// the edge case when elevator moving down &&
-	//  thre are no requests to move below the current floor  &&
+	//  there are no requests to move below the current floor  &&
 	// there are no requests to move up &&
-	// there is at least one request moving down , but the elavator already below the requested floor
+	// there is at least one request moving down , but the elevator already below the requested floor
 	if direction == _directionDown && e.directions.DownDirectionLength() > 0 && findSmallestKey(e.directions.down) > currentFloor {
 		e.setDirection(_directionUp)
 		go e.push()
@@ -173,12 +184,12 @@ func (e *Elevator) shouldMoveDown() bool {
 }
 
 func (e *Elevator) openDoor() {
-	logger.Info("open doors", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
-	time.Sleep(time.Second * 2)
+	e.logger.Info("open doors", zap.Int("floor", e.CurrentFloor()))
+	time.Sleep(e.openDoorDuration)
 }
 
 func (e *Elevator) closeDoor() {
-	logger.Info("close doors", zap.String("elevator", e.name), zap.Int("floor", e.currentFloor))
+	e.logger.Info("close doors", zap.Int("floor", e.CurrentFloor()))
 }
 
 func (e *Elevator) Request(direction string, fromFloor, toFloor int) {
