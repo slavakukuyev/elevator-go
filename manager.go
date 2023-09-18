@@ -205,46 +205,51 @@ func elevatorsOppositeDirections(elevatorsByDirection map[*Elevator]string, requ
 	return elevators
 }
 
-func abs(x int) int {
-	if x < 0 {
-		return -x
+func floorsDiff(floor, requestedFloor int) int {
+	if floor < requestedFloor {
+		return requestedFloor - floor
 	}
-	return x
+
+	if floor > requestedFloor {
+		return floor - requestedFloor
+	}
+
+	return 0
 }
 
 func findNearestElevator(elevatorsWaiting map[*Elevator]int, requestedFloor int) *Elevator {
-	if len(elevatorsWaiting) == 0 {
+	elevatorsLength := len(elevatorsWaiting)
+	if elevatorsLength == 0 {
 		return nil
 	}
 
-	if len(elevatorsWaiting) == 1 {
-		for e := range elevatorsWaiting {
-			return e
+	if elevatorsLength == 1 {
+		for elevator := range elevatorsWaiting {
+			return elevator
 		}
 	}
-	var minDistanceKeys []*Elevator
+	var minDistanceElevators []*Elevator
 	minDistance := -1
 
-	for e, floor := range elevatorsWaiting {
-		distance := abs(floor - requestedFloor)
+	for elevator, floor := range elevatorsWaiting {
+		distance := floorsDiff(floor, requestedFloor)
 
 		// If it's the first key or has the same minimum distance, add it to the list.
 		if minDistance == -1 || distance == minDistance {
-			minDistanceKeys = append(minDistanceKeys, e)
+			minDistanceElevators = append(minDistanceElevators, elevator)
 			minDistance = distance
 		} else if distance < minDistance {
 			// If it's closer than the previous ones, reset the list.
-			minDistanceKeys = []*Elevator{e}
+			minDistanceElevators = []*Elevator{elevator}
 			minDistance = distance
 		}
-
 	}
 
 	// Randomly choose one of the keys with the same minimum distance.
-	if len(minDistanceKeys) > 0 {
+	if len(minDistanceElevators) > 0 {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		randomNumber := r.Intn(len(minDistanceKeys))
-		return minDistanceKeys[randomNumber]
+		randomIndex := r.Intn(len(minDistanceElevators))
+		return minDistanceElevators[randomIndex]
 	}
 
 	return nil
