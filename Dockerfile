@@ -29,6 +29,6 @@ RUN mkdir -p /go/bin
 # Copy the compiled binary from the build stage
 COPY --from=base /src/elevator /go/bin/
 
-EXPOSE 1010
+EXPOSE 6660
 # Run the Go application
 CMD ["/go/bin/elevator"]

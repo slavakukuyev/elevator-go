@@ -20,5 +20,5 @@ This repository contains an Elevator Control System written in Go that simulates
 ## Docker
 ```bash
 docker build -t elevator . 
-docker run --rm -p 1010:1010  --name elevator elevator:latest   
+docker run --rm -p 6660:6660  --name elevator elevator:latest   
 ```

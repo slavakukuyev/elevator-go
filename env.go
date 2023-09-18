@@ -7,7 +7,7 @@ import (
 )
 
 type Config struct {
-	Port int `env:"PORT" envDefault:"1010"`
+	Port int `env:"PORT" envDefault:"6660"`
 
 	MaxFloor int `env:"DEFAULT_MAX_FLOOR" envDefault:"9"`
 	MinFloor int `env:"DEFAULT_MIN_FLOOR" envDefault:"0"`
