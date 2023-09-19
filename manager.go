@@ -50,9 +50,9 @@ func (m *Manager) RequestElevator(fromFloor, toFloor int) (*Elevator, error) {
 		return elevator, nil
 	}
 
-	elevator = m.chooseElevator(elevators, direction, fromFloor, toFloor)
-	if elevator == nil {
-		return nil, fmt.Errorf("the requested floors (%d, %d) should be in range of existing elevators", fromFloor, toFloor)
+	elevator, err := m.chooseElevator(elevators, direction, fromFloor, toFloor)
+	if err != nil {
+		return nil, err
 	}
 
 	elevator.Request(direction, fromFloor, toFloor)
@@ -71,7 +71,7 @@ func requestedElevator(elevators []*Elevator, direction string, fromFloor, toFlo
 	return nil
 }
 
-func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection string, fromFloor, toFloor int) *Elevator {
+func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection string, fromFloor, toFloor int) (*Elevator, error) {
 	elevatorsWaiting := make(map[*Elevator]int)
 	elevatorsByDirection := make(map[*Elevator]string)
 
@@ -91,12 +91,12 @@ func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection strin
 
 	if len(elevatorsWaiting) > 0 {
 		if e := findNearestElevator(elevatorsWaiting, fromFloor); e != nil {
-			return e
+			return e, nil
 		}
 	}
 
 	if len(elevatorsByDirection) == 0 {
-		return nil
+		return nil, fmt.Errorf("the requested floors (%d, %d) should be in range of existing elevators", fromFloor, toFloor)
 	}
 
 	/******** SAME DIRECTION ********/
@@ -111,7 +111,7 @@ func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection strin
 
 		if (requestedDirection == _directionUp && currentFloor < fromFloor) ||
 			(requestedDirection == _directionDown && currentFloor > fromFloor) {
-			return e
+			return e, nil
 		}
 	}
 
@@ -143,14 +143,14 @@ func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection strin
 		}
 
 		if nearestE != nil {
-			return nearestE
+			return nearestE, nil
 		}
 
 		//all the elevators in the same direction already passed the requested floor
 		//find the one with less requests in both directions for now
 		e := elevatorWithMinRequestsByDirection(elevators, "")
 		if e != nil {
-			return e
+			return e, nil
 		}
 
 	}
@@ -162,11 +162,12 @@ func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection strin
 	//then return this single filtered elevator, because:
 	// * the other elevators already passed the floors
 	// * this one will finish its opposite direction first and then will switch to required one
-	if len(filteredElevators) == 1 {
-		return filteredElevators[0]
+	filteredElevatorsLength := len(filteredElevators)
+	if filteredElevatorsLength == 1 {
+		return filteredElevators[0], nil
 	}
 
-	if len(filteredElevators) > 1 {
+	if filteredElevatorsLength > 1 {
 		var e *Elevator
 		if requestedDirection == _directionUp {
 			e = elevatorWithMinRequestsByDirection(elevators, _directionDown)
@@ -175,14 +176,16 @@ func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection strin
 		}
 
 		if e != nil {
-			return e
+			return e, nil
 		}
-
 	}
 
 	//default response will not stuck elevators -> at least one will work
-	return elevators[0]
+	for e := range elevatorsByDirection {
+		return e, nil
+	}
 
+	return nil, fmt.Errorf("no elevator found for reqeusted floors: fromFloor(%d) toFloor(%d) [WTF: One more case]", fromFloor, toFloor)
 }
 
 func elevatorsMatchingDirections(elevatorsByDirection map[*Elevator]string, requestedDirection string) []*Elevator {
