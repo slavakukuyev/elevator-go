@@ -129,12 +129,12 @@ func TestValidateIntInMapSlice(t *testing.T) {
 	}
 
 	// Check if the values exist in the map slice
-	assert.True(t, validateIntInMapSlice(m, 1, 3))
-	assert.True(t, validateIntInMapSlice(m, 1, 5))
-	assert.True(t, validateIntInMapSlice(m, 2, 4))
-	assert.True(t, validateIntInMapSlice(m, 2, 6))
+	assert.True(t, isValueInMapSlice(m, 1, 3))
+	assert.True(t, isValueInMapSlice(m, 1, 5))
+	assert.True(t, isValueInMapSlice(m, 2, 4))
+	assert.True(t, isValueInMapSlice(m, 2, 6))
 
 	// Check if non-existing values return false
-	assert.False(t, validateIntInMapSlice(m, 1, 4))
-	assert.False(t, validateIntInMapSlice(m, 2, 3))
+	assert.False(t, isValueInMapSlice(m, 1, 4))
+	assert.False(t, isValueInMapSlice(m, 2, 3))
 }

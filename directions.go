@@ -97,18 +97,18 @@ func (d *Directions) IsExisting(direction string, from, to int) bool {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
-	if direction == _directionUp && validateIntInMapSlice(d.up, from, to) {
+	if direction == _directionUp && isValueInMapSlice(d.up, from, to) {
 		return true
 	}
 
-	if direction == _directionDown && validateIntInMapSlice(d.down, from, to) {
+	if direction == _directionDown && isValueInMapSlice(d.down, from, to) {
 		return true
 	}
 
 	return false
 }
 
-func validateIntInMapSlice(m map[int][]int, key, value int) bool {
+func isValueInMapSlice(m map[int][]int, key, value int) bool {
 	slice, exists := m[key]
 	if !exists {
 		return false
