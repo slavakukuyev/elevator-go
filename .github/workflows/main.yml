@@ -25,7 +25,7 @@ jobs:
     - name: Run unit tests
       run: go test -v ./...
 
-    # - name: Run linter tests
-    #   run: golangci-lint run ./...
-    #   env:
-    #     GOLANGCI_LINT_VERSION: v1.54.2
+    - name: Run linter tests
+      run: golangci-lint run ./...
+      env:
+        GOLANGCI_LINT_VERSION: v1.54.2
