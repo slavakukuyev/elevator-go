@@ -136,7 +136,10 @@ func (s *Server) floorHandler(w http.ResponseWriter, r *http.Request) {
 	response := fmt.Sprintf("elevator %s received request: from %d to %d", elevatorName, requestBody.From, requestBody.To)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(response))
+
+	if _, err := w.Write([]byte(response)); err != nil {
+		s.logger.Error("response write error", zap.Error(err))
+	}
 }
 
 // elevatorHandler is a method of Server that handles incoming elevator requests.
@@ -194,7 +197,9 @@ func (s *Server) elevatorHandler(w http.ResponseWriter, r *http.Request) {
 	response := fmt.Sprintf("elevator %s has been created successfully", elevator.name)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(response))
+	if _, err := w.Write([]byte(response)); err != nil {
+		s.logger.Error("response write error", zap.Error(err))
+	}
 }
 
 func (s *Server) Start() {
