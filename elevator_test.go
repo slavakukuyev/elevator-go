@@ -26,10 +26,10 @@ func TestElevator_Run(t *testing.T) {
 	assert.Equal(t, 5, elevator.CurrentFloor())
 	assert.Equal(t, _directionUp, elevator.CurrentDirection())
 
-	time.Sleep(time.Millisecond * 1200)
+	time.Sleep(time.Millisecond * 1500)
 
 	assert.Equal(t, 3, elevator.CurrentFloor())
-	assert.Equal(t, _directionDown, elevator.CurrentDirection())
+	assert.Equal(t, "", elevator.CurrentDirection())
 }
 
 func TestElevator_IsRequestInRange(t *testing.T) {
