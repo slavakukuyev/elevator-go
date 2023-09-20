@@ -10,7 +10,7 @@ This repository contains an Elevator Control System written in Go that simulates
 * use zap logger (done)
 * create docker image (done)
 * create manager algorithm on base of all elevators (done)
-* add handler to creating new elevators for the system
+* add handler to creating new elevators for the system (done)
 * add http server for debug different cases (done)
 * front page (not sure  with which framework)
 * investigate delay on start (why?) (done)
