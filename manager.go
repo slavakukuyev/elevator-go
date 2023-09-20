@@ -24,8 +24,9 @@ func NewManager(logger *zap.Logger) *Manager {
 
 func (m *Manager) AddElevator(elevator *Elevator) {
 	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.elevators = append(m.elevators, elevator)
-	m.mu.Unlock()
+	m.logger.Info("new elevator added to the managment pool", zap.String("elevator", elevator.name))
 }
 
 func (m *Manager) RequestElevator(fromFloor, toFloor int) (*Elevator, error) {
@@ -56,7 +57,7 @@ func (m *Manager) RequestElevator(fromFloor, toFloor int) (*Elevator, error) {
 	}
 
 	elevator.Request(direction, fromFloor, toFloor)
-	m.logger.Info("Request has been approved", zap.String("elevator", elevator.name), zap.Int("fromFloor", fromFloor), zap.Int("toFloor", toFloor))
+	m.logger.Info("request has been approved", zap.String("elevator", elevator.name), zap.Int("fromFloor", fromFloor), zap.Int("toFloor", toFloor))
 	return elevator, nil
 
 }

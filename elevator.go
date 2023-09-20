@@ -23,9 +23,8 @@ type Elevator struct {
 
 func NewElevator(name string,
 	minFloor, maxFloor int,
-	eachFloorDuration time.Duration,
-	openDoorDuration time.Duration,
-	logger *zap.Logger) *Elevator {
+	eachFloorDuration, openDoorDuration time.Duration,
+	logger *zap.Logger) (*Elevator, error) {
 
 	e := &Elevator{
 		name:              name,
@@ -39,8 +38,9 @@ func NewElevator(name string,
 		openDoorDuration:  openDoorDuration,
 	}
 
+	//start read events process
 	go e.switchOn()
-	return e
+	return e, nil
 }
 
 func (e *Elevator) switchOn() {
