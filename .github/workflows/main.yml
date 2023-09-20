@@ -1,0 +1,31 @@
+name: Go CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: Build Docker image
+      run: docker build -t my-image .
+
+    - name: Run unit tests
+      run: go test -v ./...
+
+    # - name: Run linter tests
+    #   run: golangci-lint run ./...
+    #   env:
+    #     GOLANGCI_LINT_VERSION: v1.54.2
