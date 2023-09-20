@@ -5,7 +5,7 @@ This repository contains an Elevator Control System written in Go that simulates
 
 
 * create env (done)
-* add GitHub Actions
+* add GitHub Actions (done)
 * add Logic of floor under 0 like parking (done)
 * use zap logger (done)
 * create docker image (done)
