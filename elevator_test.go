@@ -12,7 +12,8 @@ func TestElevator_Run(t *testing.T) {
 	logger := zap.NewNop()
 
 	// Create a new elevator
-	elevator := NewElevator("TestElevator", 0, 10, time.Millisecond*100, time.Millisecond*100, logger)
+	elevator, err := NewElevator("TestElevator", 0, 10, time.Millisecond*100, time.Millisecond*100, logger)
+	assert.Nil(t, err)
 
 	// Add some requests to the elevator
 	elevator.Request(_directionUp, 2, 5)
@@ -35,7 +36,8 @@ func TestElevator_IsRequestInRange(t *testing.T) {
 	logger := zap.NewNop()
 
 	// Create a new elevator
-	elevator := NewElevator("TestElevator", 0, 5, time.Millisecond*500, time.Second*2, logger)
+	elevator, err := NewElevator("TestElevator", 0, 5, time.Millisecond*500, time.Second*2, logger)
+	assert.Nil(t, err)
 
 	// Check if the request is in range
 	assert.True(t, elevator.IsRequestInRange(0, 5))
@@ -48,7 +50,8 @@ func TestElevator_CurrentDirection(t *testing.T) {
 	logger := zap.NewNop()
 
 	// Create a new elevator
-	elevator := NewElevator("TestElevator", 0, 10, time.Millisecond*500, time.Second*2, logger)
+	elevator, err := NewElevator("TestElevator", 0, 10, time.Millisecond*500, time.Second*2, logger)
+	assert.Nil(t, err)
 
 	// Check the initial current direction of the elevator
 	assert.Equal(t, "", elevator.CurrentDirection())
@@ -64,7 +67,8 @@ func TestElevator_CurrentFloor(t *testing.T) {
 	logger := zap.NewNop()
 
 	// Create a new elevator
-	elevator := NewElevator("TestElevator", 0, 10, time.Millisecond*500, time.Second*2, logger)
+	elevator, err := NewElevator("TestElevator", 0, 10, time.Millisecond*500, time.Second*2, logger)
+	assert.Nil(t, err)
 
 	// Check the initial current floor of the elevator
 	assert.Equal(t, 0, elevator.CurrentFloor())
@@ -80,7 +84,8 @@ func TestElevator_Directions(t *testing.T) {
 	logger := zap.NewNop()
 
 	// Create a new elevator
-	elevator := NewElevator("TestElevator", 0, 10, time.Millisecond*500, time.Second*2, logger)
+	elevator, err := NewElevator("TestElevator", 0, 10, time.Millisecond*500, time.Second*2, logger)
+	assert.Nil(t, err)
 
 	// Check the initial directions of the elevator
 	assert.NotNil(t, elevator.Directions())
