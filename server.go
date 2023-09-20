@@ -20,12 +20,13 @@ type Server struct {
 	logger     *zap.Logger
 }
 
-// RequestBody represents the JSON request body.
+// FloorRequestBody represents the JSON request body.
 type FloorRequestBody struct {
 	From int `json:"from"`
 	To   int `json:"to"`
 }
 
+// ElevatorRequestBody - represents the JSON request body.
 type ElevatorRequestBody struct {
 	Name     string `json:"name"`
 	MinFloor int    `json:"min_floor"`
@@ -33,6 +34,20 @@ type ElevatorRequestBody struct {
 }
 
 // NewServer creates a new instance of Server.
+//
+// Parameters:
+// - port (int): The port number to listen on.
+// - manager (*Manager): A pointer to the Manager instance.
+// - logger (*zap.Logger): A pointer to the logger instance.
+//
+// Returns:
+// - A pointer to the new Server instance.
+//
+// Example Usage:
+//
+//	manager := NewManager(zap.NewNop())
+//	logger, _ := zap.NewDevelopment()
+//	server := NewServer(8080, manager, logger)
 func NewServer(port int, manager *Manager, logger *zap.Logger) *Server {
 	s := &Server{
 		manager: manager,
@@ -59,7 +74,28 @@ func NewServer(port int, manager *Manager, logger *zap.Logger) *Server {
 	return s
 }
 
-// floorHandler - is a method of Server that handles incoming floor requests .
+// floorHandler is a method of Server that handles incoming floor requests.
+//
+// Parameters:
+// - w (http.ResponseWriter): The response writer to send the HTTP response.
+// - r (*http.Request): The HTTP request received.
+//
+// Returns:
+// - None.
+//
+// Example Usage:
+//
+//	requestBody := FloorRequestBody{
+//	  From: 0,
+//	  To:   9,
+//	}
+//	requestBodyBytes, _ := json.Marshal(requestBody)
+//	req, _ := http.NewRequest("POST", "/floor", bytes.NewBuffer(requestBodyBytes))
+//	resp, _ := http.DefaultClient.Do(req)
+//
+//	// Check the response
+//	body, _ := ioutil.ReadAll(resp.Body)
+//	fmt.Println(string(body))
 func (s *Server) floorHandler(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 	var elevatorName string
@@ -103,30 +139,30 @@ func (s *Server) floorHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(response))
 }
 
+// elevatorHandler is a method of Server that handles incoming elevator requests.
+//
+// Parameters:
+// - w (http.ResponseWriter): The response writer to send the HTTP response.
+// - r (*http.Request): The HTTP request received.
+//
+// Returns:
+// - None.
+//
+// Example Usage:
+//
+//	requestBody := ElevatorRequestBody{
+//	  Name:      "Elevator1",
+//	  MinFloor:  0,
+//	  MaxFloor:  9,
+//	}
+//	requestBodyBytes, _ := json.Marshal(requestBody)
+//	req, _ := http.NewRequest("POST", "/elevator", bytes.NewBuffer(requestBodyBytes))
+//	resp, _ := http.DefaultClient.Do(req)
+//
+//	// Check the response
+//	body, _ := ioutil.ReadAll(resp.Body)
+//	fmt.Println(string(body))
 func (s *Server) elevatorHandler(w http.ResponseWriter, r *http.Request) {
-	// Handle HTTP POST requests to create a new elevator
-	//
-	// Args:
-	// - w (http.ResponseWriter): The response writer to send the HTTP response.
-	// - r (*http.Request): The HTTP request received.
-	//
-	// Returns:
-	// - None
-	//
-	// Example Usage:
-	//   reqBody := ElevatorRequestBody{
-	//     Name:      "Elevator1",
-	//     MinFloor:  0,
-	//     MaxFloor:  9,
-	//   }
-	//   reqBodyBytes, _ := json.Marshal(reqBody)
-	//   req, _ := http.NewRequest("POST", "/elevator", bytes.NewBuffer(reqBodyBytes))
-	//   resp, _ := http.DefaultClient.Do(req)
-	//
-	//   // Check the response
-	//   body, _ := ioutil.ReadAll(resp.Body)
-	//   fmt.Println(string(body))
-
 	if r.Method != http.MethodPost {
 		http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
 		return
