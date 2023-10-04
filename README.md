@@ -3,7 +3,7 @@ Elevator Control System
 This repository contains an Elevator Control System written in Go that simulates the operation of multiple elevators within a building.
 
 
-
+## TODO
 * create env (done)
 * add GitHub Actions (done)
 * add Logic of floor under 0 like parking (done)
@@ -15,6 +15,7 @@ This repository contains an Elevator Control System written in Go that simulates
 * front page (not sure  with which framework)
 * investigate delay on start (why?) (done)
 * unit tests (done) https://plugins.jetbrains.com/plugin/17510-machinet-ai-gpt4--chatgpt
+* support client requests in gRPC
 
 
 ## Docker
