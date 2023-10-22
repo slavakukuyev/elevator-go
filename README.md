@@ -16,6 +16,7 @@ This repository contains an Elevator Control System written in Go that simulates
 * investigate delay on start (why?) (done)
 * unit tests (done) 
 * support client requests in gRPC
+* support Prototype design pattern to clone elevators
 
 
 ## Docker
