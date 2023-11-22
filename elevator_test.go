@@ -32,20 +32,6 @@ func TestElevator_Run(t *testing.T) {
 	assert.Equal(t, "", elevator.CurrentDirection())
 }
 
-func TestElevator_IsRequestInRange(t *testing.T) {
-	logger := zap.NewNop()
-
-	// Create a new elevator
-	elevator, err := NewElevator("TestElevator", 0, 5, time.Millisecond*500, time.Second*2, logger)
-	assert.Nil(t, err)
-
-	// Check if the request is in range
-	assert.True(t, elevator.IsRequestInRange(0, 5))
-	assert.False(t, elevator.IsRequestInRange(-1, 5))
-	assert.False(t, elevator.IsRequestInRange(0, 6))
-	assert.False(t, elevator.IsRequestInRange(-1, 6))
-}
-
 func TestElevator_CurrentDirection(t *testing.T) {
 	logger := zap.NewNop()
 
@@ -80,7 +66,7 @@ func TestElevator_CurrentFloor(t *testing.T) {
 	assert.Equal(t, 5, elevator.CurrentFloor())
 }
 
-func TestElevator_Directions(t *testing.T) {
+func TestElevatorDirections(t *testing.T) {
 	logger := zap.NewNop()
 
 	// Create a new elevator

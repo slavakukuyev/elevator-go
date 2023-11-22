@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -25,6 +26,18 @@ func NewElevator(name string,
 	minFloor, maxFloor int,
 	eachFloorDuration, openDoorDuration time.Duration,
 	logger *zap.Logger) (*Elevator, error) {
+
+	if name == "" {
+		return nil, fmt.Errorf("name can't be empty")
+	}
+
+	if minFloor == maxFloor {
+		return nil, fmt.Errorf("minFloor and maxFloor can't be equal")
+	}
+
+	if logger == nil {
+		return nil, fmt.Errorf("logger can't be nil")
+	}
 
 	e := &Elevator{
 		name:              name,
@@ -167,7 +180,7 @@ func (e *Elevator) Run() {
 func (e *Elevator) shouldMoveUp() bool {
 	if e.directions.UpDirectionLength() > 0 {
 		largest := findLargestKey(e.directions.up)
-		return largest > e.currentFloor
+		return largest > e.CurrentFloor()
 	}
 
 	return false
@@ -177,7 +190,7 @@ func (e *Elevator) shouldMoveUp() bool {
 func (e *Elevator) shouldMoveDown() bool {
 	if e.directions.DownDirectionLength() > 0 {
 		smallest := findSmallestKey(e.directions.down)
-		return smallest < e.currentFloor
+		return smallest < e.CurrentFloor()
 	}
 
 	return false
