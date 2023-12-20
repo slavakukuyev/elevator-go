@@ -18,6 +18,7 @@ This repository contains an Elevator Control System written in Go that simulates
 * support client requests in gRPC
 * support Prototype design pattern to clone elevators
 * create default endpoint to provide an available endpoints to api (like GET api.elevator.com)
+* Create default files structure by golang conventions
   
 
 
