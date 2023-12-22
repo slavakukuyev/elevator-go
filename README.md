@@ -22,6 +22,8 @@ This repository contains an Elevator Control System written in Go that simulates
 * OAuth / OAuth 2.0
 * Versioning of API in URL (example: https://elevator.com/v1/newLift/...)
 * Generic logs function
+* Add metrics to undertsand if some of elevators works harder than others and find a fix if required
+  
 
 ## Docker
 ```bash
