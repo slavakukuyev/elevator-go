@@ -4,6 +4,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -13,9 +15,18 @@ func main() {
 	factory := &StandardElevatorFactory{}
 	manager := NewManager(factory, logger)
 
-	manager.AddElevator("A", cfg.MinFloor, cfg.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
-	manager.AddElevator("B", cfg.MinFloor, cfg.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
-	manager.AddElevator("C", -4, 5, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
+	err := manager.AddElevator("A", cfg.MinFloor, cfg.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
+	if err != nil {
+		logger.Fatal("elevator %s not created", zap.String("name", "A"))
+	}
+	err = manager.AddElevator("B", cfg.MinFloor, cfg.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
+	if err != nil {
+		logger.Fatal("elevator %s not created", zap.String("name", "B"))
+	}
+	err = manager.AddElevator("C", -4, 5, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
+	if err != nil {
+		logger.Fatal("elevator %s not created", zap.String("name", "C"))
+	}
 
 	port := cfg.Port
 	server := NewServer(port, manager, logger)
