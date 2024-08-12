@@ -179,8 +179,7 @@ func (s *Server) elevatorHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Request an elevator going from floor 0 to floor 9
-	elevator, err := NewElevator(requestBody.Name, requestBody.MinFloor, requestBody.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, s.logger)
+	err = s.manager.AddElevator(requestBody.Name, requestBody.MinFloor, requestBody.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, s.logger)
 	if err != nil {
 		s.logger.Error("request elevator error",
 			zap.Error(err),
@@ -192,9 +191,7 @@ func (s *Server) elevatorHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.manager.AddElevator(elevator)
-
-	response := fmt.Sprintf("elevator %s has been created successfully", elevator.name)
+	response := fmt.Sprintf("elevator %s has been created successfully", requestBody.Name)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte(response)); err != nil {

@@ -13,8 +13,9 @@ import (
 )
 
 func TestElevatorHandler(t *testing.T) {
+	factory := &StandardElevatorFactory{}
 	// Create a new Manager and Server instance
-	manager := NewManager(zap.NewNop())
+	manager := NewManager(factory, zap.NewNop())
 	server := NewServer(8080, manager, zap.NewNop())
 
 	// Create a new HTTP request
@@ -42,11 +43,11 @@ func TestElevatorHandler(t *testing.T) {
 }
 
 func TestFloorHandler(t *testing.T) {
+	factory := &StandardElevatorFactory{}
 	// Create a new Manager and Server instance
-	manager := NewManager(zap.NewNop())
-	elevator, err := NewElevator("Elevator1", 0, 9, 1*time.Second, 1*time.Second, zap.NewNop())
+	manager := NewManager(factory, zap.NewNop())
+	err := manager.AddElevator("Elevator1", 0, 9, 1*time.Second, 1*time.Second, zap.NewNop())
 	assert.Nil(t, err)
-	manager.AddElevator(elevator)
 
 	server := NewServer(8080, manager, zap.NewNop())
 
