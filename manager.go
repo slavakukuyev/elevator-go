@@ -13,20 +13,34 @@ type Manager struct {
 	mu        sync.RWMutex
 	elevators []*Elevator
 	logger    *zap.Logger
+	factory   ElevatorFactory
 }
 
-func NewManager(logger *zap.Logger) *Manager {
+func NewManager(factory ElevatorFactory, logger *zap.Logger) *Manager {
 	return &Manager{
-		elevators: make([]*Elevator, 0),
+		elevators: []*Elevator{},
 		logger:    logger,
+		factory:   factory,
 	}
 }
 
-func (m *Manager) AddElevator(elevator *Elevator) {
+func (m *Manager) AddElevator(name string,
+	minFloor, maxFloor int,
+	eachFloorDuration, openDoorDuration time.Duration,
+	logger *zap.Logger) error {
+	elevator, err := m.factory.CreateElevator(name,
+		minFloor, maxFloor,
+		eachFloorDuration, openDoorDuration,
+		logger)
+	if err != nil {
+		return fmt.Errorf("error on initialization new elevator: %w", err)
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.elevators = append(m.elevators, elevator)
 	m.logger.Info("new elevator added to the managment pool", zap.String("elevator", elevator.name))
+	return nil
 }
 
 func (m *Manager) RequestElevator(fromFloor, toFloor int) (*Elevator, error) {

@@ -4,35 +4,18 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
-	"go.uber.org/zap"
 )
 
 func main() {
 	initConfig()
 	logger := NewLogger()
 
-	manager := NewManager(logger)
+	factory := &StandardElevatorFactory{}
+	manager := NewManager(factory, logger)
 
-	//default elevators
-	//main
-	elevator1, err := NewElevator("A", cfg.MinFloor, cfg.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
-	if err != nil {
-		logger.Fatal("elevator %s not created", zap.String("name", "A"))
-	}
-	elevator2, err := NewElevator("B", cfg.MinFloor, cfg.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
-	if err != nil {
-		logger.Fatal("elevator %s not created", zap.String("name", "B"))
-	}
-	//parking
-	elevator3, err := NewElevator("C", -4, 5, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
-	if err != nil {
-		logger.Fatal("elevator %s not created", zap.String("name", "C"))
-	}
-
-	manager.AddElevator(elevator1)
-	manager.AddElevator(elevator2)
-	manager.AddElevator(elevator3)
+	manager.AddElevator("A", cfg.MinFloor, cfg.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
+	manager.AddElevator("B", cfg.MinFloor, cfg.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
+	manager.AddElevator("C", -4, 5, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
 
 	port := cfg.Port
 	server := NewServer(port, manager, logger)
