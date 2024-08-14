@@ -15,7 +15,7 @@ This repository contains an Elevator Control System written in Go that simulates
 * front page (not sure  with which framework)
 * investigate delay on start (why?) (done)
 * unit tests (done) 
-* support client requests in gRPC
+* support client requests in gRPC - rejected for now. 
 * support Prototype design pattern to clone elevators
 * create default endpoint to provide an available endpoints to api (like GET api.elevator.com)
 * Create default files structure by golang conventions
