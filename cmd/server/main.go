@@ -6,10 +6,12 @@ import (
 	"syscall"
 
 	"go.uber.org/zap"
+
+	"github.com/slavakukuyev/elevator-go/internal/app/config"
 )
 
 func main() {
-	initConfig()
+	config.InitConfig()
 	logger := NewLogger()
 
 	factory := &StandardElevatorFactory{}

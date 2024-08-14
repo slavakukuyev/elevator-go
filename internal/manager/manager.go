@@ -1,4 +1,4 @@
-package main
+package manager
 
 import (
 	"fmt"
@@ -6,19 +6,24 @@ import (
 	"sync"
 	"time"
 
+	"github.com/slavakukuyev/elevator-go/internal/elevator"
+	"github.com/slavakukuyev/elevator-go/internal/infra/config"
 	"go.uber.org/zap"
 )
 
+const _directionUp = "up"
+const _directionDown = "down"
+
 type Manager struct {
 	mu        sync.RWMutex
-	elevators []*Elevator
+	elevators []*elevator.Elevator
 	logger    *zap.Logger
-	factory   ElevatorFactory
+	factory   elevator.ElevatorFactory
 }
 
-func NewManager(factory ElevatorFactory, logger *zap.Logger) *Manager {
+func NewManager(cfg *config.Config, factory elevator.ElevatorFactory, logger *zap.Logger) *Manager {
 	return &Manager{
-		elevators: []*Elevator{},
+		elevators: []*elevator.Elevator{},
 		logger:    logger,
 		factory:   factory,
 	}
@@ -39,11 +44,11 @@ func (m *Manager) AddElevator(name string,
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.elevators = append(m.elevators, elevator)
-	m.logger.Info("new elevator added to the managment pool", zap.String("elevator", elevator.name))
+	m.logger.Info("new elevator added to the managment pool", zap.String("elevator", elevator.Name()))
 	return nil
 }
 
-func (m *Manager) RequestElevator(fromFloor, toFloor int) (*Elevator, error) {
+func (m *Manager) RequestElevator(fromFloor, toFloor int) (*elevator.Elevator, error) {
 
 	if toFloor == fromFloor {
 		return nil, fmt.Errorf("the requested floor (%d) should be different from your floor (%d)", toFloor, fromFloor)
@@ -58,7 +63,7 @@ func (m *Manager) RequestElevator(fromFloor, toFloor int) (*Elevator, error) {
 	elevators := m.elevators
 	m.mu.RUnlock()
 
-	var elevator *Elevator
+	var elevator *elevator.Elevator
 
 	// validate existing requests
 	if elevator = requestedElevator(elevators, direction, fromFloor, toFloor); elevator != nil {
@@ -71,14 +76,14 @@ func (m *Manager) RequestElevator(fromFloor, toFloor int) (*Elevator, error) {
 	}
 
 	elevator.Request(direction, fromFloor, toFloor)
-	m.logger.Info("request has been approved", zap.String("elevator", elevator.name), zap.Int("fromFloor", fromFloor), zap.Int("toFloor", toFloor))
+	m.logger.Info("request has been approved", zap.String("elevator", elevator.Name()), zap.Int("fromFloor", fromFloor), zap.Int("toFloor", toFloor))
 	return elevator, nil
 
 }
 
-func requestedElevator(elevators []*Elevator, direction string, fromFloor, toFloor int) *Elevator {
+func requestedElevator(elevators []*elevator.Elevator, direction string, fromFloor, toFloor int) *elevator.Elevator {
 	for _, e := range elevators {
-		if e.directions.IsExisting(direction, fromFloor, toFloor) {
+		if e.Directions().IsExisting(direction, fromFloor, toFloor) {
 			return e
 		}
 	}
@@ -86,9 +91,9 @@ func requestedElevator(elevators []*Elevator, direction string, fromFloor, toFlo
 	return nil
 }
 
-func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection string, fromFloor, toFloor int) (*Elevator, error) {
-	elevatorsWaiting := make(map[*Elevator]int)
-	elevatorsByDirection := make(map[*Elevator]string)
+func (m *Manager) chooseElevator(elevators []*elevator.Elevator, requestedDirection string, fromFloor, toFloor int) (*Elevator, error) {
+	elevatorsWaiting := make(map[*elevator.Elevator]int)
+	elevatorsByDirection := make(map[*elevator.Elevator]string)
 
 	//case when elevator is waiting to start
 	for _, e := range elevators {
@@ -135,7 +140,7 @@ func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection strin
 	if len(filteredElevators) > 1 {
 		var first bool = true
 		var smallest int
-		var nearestE *Elevator
+		var nearestE *elevator.Elevator
 
 		for _, e := range filteredElevators {
 			currentFloor := e.CurrentFloor()
@@ -183,7 +188,7 @@ func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection strin
 	}
 
 	if filteredElevatorsLength > 1 {
-		var e *Elevator
+		var e *elevator.Elevator
 		if requestedDirection == _directionUp {
 			e = elevatorWithMinRequestsByDirection(elevators, _directionDown)
 		} else if requestedDirection == _directionDown {
@@ -203,8 +208,8 @@ func (m *Manager) chooseElevator(elevators []*Elevator, requestedDirection strin
 	return nil, fmt.Errorf("no elevator found for reqeusted floors: fromFloor(%d) toFloor(%d) [WTF: One more case]", fromFloor, toFloor)
 }
 
-func elevatorsMatchingDirections(elevatorsByDirection map[*Elevator]string, requestedDirection string) []*Elevator {
-	elevators := make([]*Elevator, 0, len(elevatorsByDirection))
+func elevatorsMatchingDirections(elevatorsByDirection map[*elevator.Elevator]string, requestedDirection string) []*elevator.Elevator {
+	elevators := make([]*elevator.Elevator, 0, len(elevatorsByDirection))
 	for e, sourceDirection := range elevatorsByDirection {
 		if sourceDirection == requestedDirection {
 			elevators = append(elevators, e)
@@ -213,8 +218,8 @@ func elevatorsMatchingDirections(elevatorsByDirection map[*Elevator]string, requ
 	return elevators
 }
 
-func elevatorsOppositeDirections(elevatorsByDirection map[*Elevator]string, requestedDirection string) []*Elevator {
-	elevators := make([]*Elevator, 0, len(elevatorsByDirection))
+func elevatorsOppositeDirections(elevatorsByDirection map[*elevator.Elevator]string, requestedDirection string) []*elevator.Elevator {
+	elevators := make([]*elevator.Elevator, 0, len(elevatorsByDirection))
 	for e, sourceDirection := range elevatorsByDirection {
 		if sourceDirection != requestedDirection {
 			elevators = append(elevators, e)
@@ -235,7 +240,7 @@ func floorsDiff(floor, requestedFloor int) int {
 	return 0
 }
 
-func findNearestElevator(elevatorsWaiting map[*Elevator]int, requestedFloor int) *Elevator {
+func findNearestElevator(elevatorsWaiting map[*elevator.Elevator]int, requestedFloor int) *elevator.Elevator {
 	elevatorsLength := len(elevatorsWaiting)
 	if elevatorsLength == 0 {
 		return nil
@@ -246,7 +251,7 @@ func findNearestElevator(elevatorsWaiting map[*Elevator]int, requestedFloor int)
 			return elevator
 		}
 	}
-	var minDistanceElevators []*Elevator
+	var minDistanceElevators []*elevator.Elevator
 	minDistance := -1
 
 	for elevator, floor := range elevatorsWaiting {
@@ -258,7 +263,7 @@ func findNearestElevator(elevatorsWaiting map[*Elevator]int, requestedFloor int)
 			minDistance = distance
 		} else if distance < minDistance {
 			// If it's closer than the previous ones, reset the list.
-			minDistanceElevators = []*Elevator{elevator}
+			minDistanceElevators = []*elevator.Elevator{elevator}
 			minDistance = distance
 		}
 	}
@@ -281,8 +286,8 @@ func findNearestElevator(elevatorsWaiting map[*Elevator]int, requestedFloor int)
 // - direction: The requested direction ("up", "down", or empty for any direction).
 // Returns:
 // - An Elevator pointer representing the selected elevator.
-func elevatorWithMinRequestsByDirection(elevators []*Elevator, direction string) *Elevator {
-	var elevator *Elevator
+func elevatorWithMinRequestsByDirection(elevators []*elevator.Elevator, direction string) *elevator.Elevator {
+	var elevator *elevator.Elevator
 	var smallest int
 	var first bool = true
 

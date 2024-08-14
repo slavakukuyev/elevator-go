@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"context"
@@ -9,13 +9,14 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/slavakukuyev/elevator-go/internal/manager"
 	"github.com/slavakukuyev/elevator-go/metrics"
 	"go.uber.org/zap"
 )
 
 // Server represents the HTTP server.
 type Server struct {
-	manager    *Manager
+	manager    *manager.Manager
 	httpServer *http.Server
 	logger     *zap.Logger
 }
@@ -48,7 +49,7 @@ type ElevatorRequestBody struct {
 //	manager := NewManager(zap.NewNop())
 //	logger, _ := zap.NewDevelopment()
 //	server := NewServer(8080, manager, logger)
-func NewServer(port int, manager *Manager, logger *zap.Logger) *Server {
+func NewServer(port int, manager *manager.Manager, logger *zap.Logger) *Server {
 	s := &Server{
 		manager: manager,
 		logger:  logger.With(zap.String("module", "server")),
