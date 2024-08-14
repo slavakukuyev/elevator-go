@@ -1,4 +1,4 @@
-package server
+package http
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/slavakukuyev/elevator-go/internal/infra/config"
 	"github.com/slavakukuyev/elevator-go/internal/manager"
 	"github.com/slavakukuyev/elevator-go/metrics"
 	"go.uber.org/zap"
@@ -19,6 +20,7 @@ type Server struct {
 	manager    *manager.Manager
 	httpServer *http.Server
 	logger     *zap.Logger
+	cfg        *config.Config
 }
 
 // FloorRequestBody represents the JSON request body.
@@ -49,10 +51,11 @@ type ElevatorRequestBody struct {
 //	manager := NewManager(zap.NewNop())
 //	logger, _ := zap.NewDevelopment()
 //	server := NewServer(8080, manager, logger)
-func NewServer(port int, manager *manager.Manager, logger *zap.Logger) *Server {
+func NewServer(cfg *config.Config, port int, manager *manager.Manager, logger *zap.Logger) *Server {
 	s := &Server{
 		manager: manager,
 		logger:  logger.With(zap.String("module", "server")),
+		cfg:     cfg,
 	}
 
 	addr := fmt.Sprintf(":%d", port)
@@ -131,7 +134,7 @@ func (s *Server) floorHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if elevator != nil {
-		elevatorName = elevator.name
+		elevatorName = elevator.Name()
 	}
 
 	response := fmt.Sprintf("elevator %s received request: from %d to %d", elevatorName, requestBody.From, requestBody.To)
@@ -180,7 +183,7 @@ func (s *Server) elevatorHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.manager.AddElevator(requestBody.Name, requestBody.MinFloor, requestBody.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, s.logger)
+	err = s.manager.AddElevator(s.cfg, requestBody.Name, requestBody.MinFloor, requestBody.MaxFloor, s.cfg.EachFloorDuration, s.cfg.OpenDoorDuration, s.logger)
 	if err != nil {
 		s.logger.Error("request elevator error",
 			zap.Error(err),

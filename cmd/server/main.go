@@ -7,31 +7,35 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/slavakukuyev/elevator-go/internal/app/config"
+	"github.com/slavakukuyev/elevator-go/internal/elevator"
+	"github.com/slavakukuyev/elevator-go/internal/http"
+	"github.com/slavakukuyev/elevator-go/internal/infra/config"
+	"github.com/slavakukuyev/elevator-go/internal/infra/logger"
+	"github.com/slavakukuyev/elevator-go/internal/manager"
 )
 
 func main() {
-	config.InitConfig()
-	logger := NewLogger()
+	cfg := config.InitConfig()
+	logger := logger.NewLogger()
 
-	factory := &StandardElevatorFactory{}
-	manager := NewManager(factory, logger)
+	factory := &elevator.StandardElevatorFactory{}
+	manager := manager.NewManager(cfg, factory, logger)
 
-	err := manager.AddElevator("A", cfg.MinFloor, cfg.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
+	err := manager.AddElevator(cfg, "A", cfg.MinFloor, cfg.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
 	if err != nil {
 		logger.Fatal("elevator %s not created", zap.String("name", "A"))
 	}
-	err = manager.AddElevator("B", cfg.MinFloor, cfg.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
+	err = manager.AddElevator(cfg, "B", cfg.MinFloor, cfg.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
 	if err != nil {
 		logger.Fatal("elevator %s not created", zap.String("name", "B"))
 	}
-	err = manager.AddElevator("C", -4, 5, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
+	err = manager.AddElevator(cfg, "C", -4, 5, cfg.EachFloorDuration, cfg.OpenDoorDuration, logger)
 	if err != nil {
 		logger.Fatal("elevator %s not created", zap.String("name", "C"))
 	}
 
 	port := cfg.Port
-	server := NewServer(port, manager, logger)
+	server := http.NewServer(cfg, port, manager, logger)
 
 	// Start the server in a separate goroutine
 	go server.Start()

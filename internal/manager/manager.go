@@ -29,11 +29,11 @@ func NewManager(cfg *config.Config, factory elevator.ElevatorFactory, logger *za
 	}
 }
 
-func (m *Manager) AddElevator(name string,
+func (m *Manager) AddElevator(cfg *config.Config, name string,
 	minFloor, maxFloor int,
 	eachFloorDuration, openDoorDuration time.Duration,
 	logger *zap.Logger) error {
-	elevator, err := m.factory.CreateElevator(name,
+	elevator, err := m.factory.CreateElevator(cfg, name,
 		minFloor, maxFloor,
 		eachFloorDuration, openDoorDuration,
 		logger)
@@ -91,7 +91,7 @@ func requestedElevator(elevators []*elevator.Elevator, direction string, fromFlo
 	return nil
 }
 
-func (m *Manager) chooseElevator(elevators []*elevator.Elevator, requestedDirection string, fromFloor, toFloor int) (*Elevator, error) {
+func (m *Manager) chooseElevator(elevators []*elevator.Elevator, requestedDirection string, fromFloor, toFloor int) (*elevator.Elevator, error) {
 	elevatorsWaiting := make(map[*elevator.Elevator]int)
 	elevatorsByDirection := make(map[*elevator.Elevator]string)
 
@@ -254,16 +254,16 @@ func findNearestElevator(elevatorsWaiting map[*elevator.Elevator]int, requestedF
 	var minDistanceElevators []*elevator.Elevator
 	minDistance := -1
 
-	for elevator, floor := range elevatorsWaiting {
+	for el, floor := range elevatorsWaiting {
 		distance := floorsDiff(floor, requestedFloor)
 
 		// If it's the first key or has the same minimum distance, add it to the list.
 		if minDistance == -1 || distance == minDistance {
-			minDistanceElevators = append(minDistanceElevators, elevator)
+			minDistanceElevators = append(minDistanceElevators, el)
 			minDistance = distance
 		} else if distance < minDistance {
 			// If it's closer than the previous ones, reset the list.
-			minDistanceElevators = []*elevator.Elevator{elevator}
+			minDistanceElevators = []*elevator.Elevator{el}
 			minDistance = distance
 		}
 	}

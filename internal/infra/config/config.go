@@ -19,13 +19,14 @@ type Config struct {
 	DirectionDown string
 }
 
-var cfg Config
-
-func InitConfig() {
+func InitConfig() *Config {
+	var cfg *Config
 	if err := env.Parse(&cfg); err != nil {
 		panic("error on parsing env")
 	}
 
 	cfg.DirectionUp = "up"
 	cfg.DirectionDown = "down"
+
+	return cfg
 }

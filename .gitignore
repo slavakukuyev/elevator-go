@@ -25,3 +25,5 @@ go.work
 machinet.conf
 test_output.json
 elevator-go
+
+out/
