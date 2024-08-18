@@ -12,7 +12,6 @@ import (
 	"github.com/slavakukuyev/elevator-go/internal/infra/config"
 	"github.com/slavakukuyev/elevator-go/internal/manager"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 func buildServerTestConfig() *config.Config {
@@ -22,8 +21,8 @@ func buildServerTestConfig() *config.Config {
 func TestElevatorHandler(t *testing.T) {
 	factory := &elevator.StandardElevatorFactory{}
 	// Create a new Manager and Server instance
-	manager := manager.NewManager(buildServerTestConfig(), factory, zap.NewNop())
-	server := NewServer(buildServerTestConfig(), 8080, manager, zap.NewNop())
+	manager := manager.NewManager(buildServerTestConfig(), factory)
+	server := NewServer(buildServerTestConfig(), 8080, manager)
 
 	// Create a new HTTP request
 	requestBody := ElevatorRequestBody{
@@ -52,11 +51,11 @@ func TestElevatorHandler(t *testing.T) {
 func TestFloorHandler(t *testing.T) {
 	factory := &elevator.StandardElevatorFactory{}
 	// Create a new Manager and Server instance
-	manager := manager.NewManager(buildServerTestConfig(), factory, zap.NewNop())
-	err := manager.AddElevator(buildServerTestConfig(), "Elevator1", 0, 9, 1*time.Second, 1*time.Second, zap.NewNop())
+	manager := manager.NewManager(buildServerTestConfig(), factory)
+	err := manager.AddElevator(buildServerTestConfig(), "Elevator1", 0, 9, 1*time.Second, 1*time.Second)
 	assert.Nil(t, err)
 
-	server := NewServer(buildServerTestConfig(), 8080, manager, zap.NewNop())
+	server := NewServer(buildServerTestConfig(), 8080, manager)
 
 	// Create a new HTTP request
 	requestBody := FloorRequestBody{

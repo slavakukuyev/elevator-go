@@ -2,13 +2,13 @@ package manager
 
 import (
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/slavakukuyev/elevator-go/internal/elevator"
 	"github.com/slavakukuyev/elevator-go/internal/infra/config"
-	"go.uber.org/zap"
 )
 
 const _directionUp = "up"
@@ -17,26 +17,22 @@ const _directionDown = "down"
 type Manager struct {
 	mu        sync.RWMutex
 	elevators []*elevator.Elevator
-	logger    *zap.Logger
 	factory   elevator.ElevatorFactory
 }
 
-func NewManager(cfg *config.Config, factory elevator.ElevatorFactory, logger *zap.Logger) *Manager {
+func NewManager(cfg *config.Config, factory elevator.ElevatorFactory) *Manager {
 	return &Manager{
 		elevators: []*elevator.Elevator{},
-		logger:    logger,
 		factory:   factory,
 	}
 }
 
 func (m *Manager) AddElevator(cfg *config.Config, name string,
 	minFloor, maxFloor int,
-	eachFloorDuration, openDoorDuration time.Duration,
-	logger *zap.Logger) error {
+	eachFloorDuration, openDoorDuration time.Duration) error {
 	elevator, err := m.factory.CreateElevator(cfg, name,
 		minFloor, maxFloor,
-		eachFloorDuration, openDoorDuration,
-		logger)
+		eachFloorDuration, openDoorDuration)
 	if err != nil {
 		return fmt.Errorf("error on initialization new elevator: %w", err)
 	}
@@ -44,7 +40,7 @@ func (m *Manager) AddElevator(cfg *config.Config, name string,
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.elevators = append(m.elevators, elevator)
-	m.logger.Info("new elevator added to the managment pool", zap.String("elevator", elevator.Name()))
+	slog.Info("new elevator added to the managment pool", slog.String("elevator", elevator.Name()))
 	return nil
 }
 
@@ -76,7 +72,7 @@ func (m *Manager) RequestElevator(fromFloor, toFloor int) (*elevator.Elevator, e
 	}
 
 	elevator.Request(direction, fromFloor, toFloor)
-	m.logger.Info("request has been approved", zap.String("elevator", elevator.Name()), zap.Int("fromFloor", fromFloor), zap.Int("toFloor", toFloor))
+	slog.Info("request has been approved", slog.String("elevator", elevator.Name()), slog.Int("fromFloor", fromFloor), slog.Int("toFloor", toFloor))
 	return elevator, nil
 
 }

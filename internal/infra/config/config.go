@@ -15,12 +15,12 @@ type Config struct {
 	EachFloorDuration time.Duration `env:"EACH_FLOOR_DURATION" envDefault:"500ms"`
 	OpenDoorDuration  time.Duration `env:"OPEN_DOOR_DURATION" envDefault:"2s"`
 
-	DirectionUp   string
-	DirectionDown string
+	DirectionUp   string `env:"DIRECTION_UP" envDefault:"up"`
+	DirectionDown string `env:"DIRECTION_DOWN" envDefault:"down"`
 }
 
 func InitConfig() *Config {
-	var cfg *Config
+	cfg := Config{}
 	if err := env.Parse(&cfg); err != nil {
 		panic("error on parsing env")
 	}
@@ -28,5 +28,5 @@ func InitConfig() *Config {
 	cfg.DirectionUp = "up"
 	cfg.DirectionDown = "down"
 
-	return cfg
+	return &cfg
 }
