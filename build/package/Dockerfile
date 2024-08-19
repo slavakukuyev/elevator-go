@@ -1,5 +1,5 @@
 # Stage 1: Build the Go application
-FROM golang:1.21-alpine AS base
+FROM golang:1.22-alpine AS base
 
 # Set the working directory
 WORKDIR /src

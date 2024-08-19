@@ -27,7 +27,7 @@ jobs:
         GOLANGCI_LINT_VERSION: v1.54.2
 
     - name: Build Docker image
-      run: docker build -t elevator-go .
+      run: docker build -t elevator-go -f ./build/package/Dockerfile .
 
     - name: Run tests
       run: |

@@ -1,6 +1,6 @@
 module github.com/slavakukuyev/elevator-go
 
-go 1.21
+go 1.22
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
@@ -19,7 +19,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
-	github.com/rogpeppe/go-internal v1.11.0 // indirect
+	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
