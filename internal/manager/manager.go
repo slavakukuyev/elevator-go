@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/slavakukuyev/elevator-go/internal/elevator"
+	"github.com/slavakukuyev/elevator-go/internal/factory"
 	"github.com/slavakukuyev/elevator-go/internal/infra/config"
 )
 
@@ -17,10 +18,10 @@ const _directionDown = "down"
 type Manager struct {
 	mu        sync.RWMutex
 	elevators []*elevator.Elevator
-	factory   elevator.ElevatorFactory
+	factory   factory.ElevatorFactory
 }
 
-func NewManager(cfg *config.Config, factory elevator.ElevatorFactory) *Manager {
+func New(cfg *config.Config, factory factory.ElevatorFactory) *Manager {
 	return &Manager{
 		elevators: []*elevator.Elevator{},
 		factory:   factory,

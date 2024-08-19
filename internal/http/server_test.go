@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/slavakukuyev/elevator-go/internal/elevator"
+	"github.com/slavakukuyev/elevator-go/internal/factory"
 	"github.com/slavakukuyev/elevator-go/internal/infra/config"
 	"github.com/slavakukuyev/elevator-go/internal/manager"
 	"github.com/stretchr/testify/assert"
@@ -19,9 +19,9 @@ func buildServerTestConfig() *config.Config {
 }
 
 func TestElevatorHandler(t *testing.T) {
-	factory := &elevator.StandardElevatorFactory{}
+	factory := &factory.StandardElevatorFactory{}
 	// Create a new Manager and Server instance
-	manager := manager.NewManager(buildServerTestConfig(), factory)
+	manager := manager.New(buildServerTestConfig(), factory)
 	server := NewServer(buildServerTestConfig(), 8080, manager)
 
 	// Create a new HTTP request
@@ -49,9 +49,9 @@ func TestElevatorHandler(t *testing.T) {
 }
 
 func TestFloorHandler(t *testing.T) {
-	factory := &elevator.StandardElevatorFactory{}
+	factory := &factory.StandardElevatorFactory{}
 	// Create a new Manager and Server instance
-	manager := manager.NewManager(buildServerTestConfig(), factory)
+	manager := manager.New(buildServerTestConfig(), factory)
 	err := manager.AddElevator(buildServerTestConfig(), "Elevator1", 0, 9, 1*time.Second, 1*time.Second)
 	assert.Nil(t, err)
 

@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/slavakukuyev/elevator-go/internal/elevator"
+	"github.com/slavakukuyev/elevator-go/internal/factory"
 	"github.com/slavakukuyev/elevator-go/internal/http"
 	"github.com/slavakukuyev/elevator-go/internal/infra/config"
 	"github.com/slavakukuyev/elevator-go/internal/manager"
@@ -15,8 +15,8 @@ import (
 func main() {
 	cfg := config.InitConfig()
 
-	factory := elevator.StandardElevatorFactory{}
-	manager := manager.NewManager(cfg, factory)
+	factory := &factory.StandardElevatorFactory{}
+	manager := manager.New(cfg, factory)
 
 	err := manager.AddElevator(cfg, "A", cfg.MinFloor, cfg.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration)
 	if err != nil {

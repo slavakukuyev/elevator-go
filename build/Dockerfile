@@ -15,10 +15,10 @@ RUN go mod download
 COPY . .
 
 # Build the Go application
-RUN GOOS=linux GOARCH=amd64 go build -o elevator
+RUN GOOS=linux GOARCH=amd64 go build ./cmd/server/main.go -o elevator
 
 # Stage 2: Create the final image using a smaller base image
-FROM alpine:3.18
+FROM alpine:3.19
 
 # Set the working directory
 WORKDIR /src
