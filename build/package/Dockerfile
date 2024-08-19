@@ -1,34 +1,32 @@
-# Stage 1: Build the Go application
-FROM golang:1.22-alpine AS base
+# Stage 1: Build the Go binary
+FROM golang:1.21-alpine AS builder
 
-# Set the working directory
-WORKDIR /src
+# Set the Current Working Directory inside the container
+WORKDIR /app
 
-# Set environment variables for Go module downloads
-ENV CGO_ENABLED=0 \
-    GO111MODULE=on \
-    GOPROXY=proxy.golang.org,direct
+# Copy go.mod and go.sum files
+COPY go.mod go.sum ./
 
-COPY go.mod go.sum /src/
+# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
 RUN go mod download
 
+# Copy the source from the current directory to the Working Directory inside the container
 COPY . .
 
-# Build the Go application
-RUN GOOS=linux GOARCH=amd64 go build ./cmd/server/main.go -o elevator
+# Build the Go app
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/out/elevator-go ./cmd/server
 
-# Stage 2: Create the final image using a smaller base image
+# Stage 2: Run the Go binary
 FROM alpine:3.19
 
-# Set the working directory
-WORKDIR /src
+# Set the Current Working Directory inside the container
+WORKDIR /app
 
-# Create the /go/bin directory
-RUN mkdir -p /go/bin
+# Copy the Pre-built binary file from the previous stage
+COPY --from=builder /app/out/elevator-go .
 
-# Copy the compiled binary from the build stage
-COPY --from=base /src/elevator /go/bin/
-
+# Expose port if needed (for example, if your app listens on port 6660)
 EXPOSE 6660
-# Run the Go application
-CMD ["/go/bin/elevator"]
+
+# Command to run the executable
+CMD ["./elevator-go"]
