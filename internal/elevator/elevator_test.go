@@ -1,18 +1,23 @@
-package main
+package elevator
 
 import (
 	"testing"
 	"time"
 
+	"github.com/slavakukuyev/elevator-go/internal/infra/config"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
-func TestElevator_Run(t *testing.T) {
-	logger := zap.NewNop()
+const _directionDown = "down"
+const _directionUp = "up"
 
+func buildElevatorTestConfig() *config.Config {
+	return &config.Config{DirectionUpKey: "up", DirectionDownKey: "down"}
+}
+
+func TestElevator_Run(t *testing.T) {
 	// Create a new elevator
-	elevator, err := NewElevator("TestElevator", 0, 10, time.Millisecond*100, time.Millisecond*100, logger)
+	elevator, err := New(buildElevatorTestConfig(), "TestElevator", 0, 10, time.Millisecond*100, time.Millisecond*100)
 	assert.Nil(t, err)
 
 	// Add some requests to the elevator
@@ -33,10 +38,8 @@ func TestElevator_Run(t *testing.T) {
 }
 
 func TestElevator_CurrentDirection(t *testing.T) {
-	logger := zap.NewNop()
-
 	// Create a new elevator
-	elevator, err := NewElevator("TestElevator", 0, 10, time.Millisecond*500, time.Second*2, logger)
+	elevator, err := New(buildElevatorTestConfig(), "TestElevator", 0, 10, time.Millisecond*500, time.Second*2)
 	assert.Nil(t, err)
 
 	// Check the initial current direction of the elevator
@@ -50,10 +53,8 @@ func TestElevator_CurrentDirection(t *testing.T) {
 }
 
 func TestElevator_CurrentFloor(t *testing.T) {
-	logger := zap.NewNop()
-
 	// Create a new elevator
-	elevator, err := NewElevator("TestElevator", 0, 10, time.Millisecond*500, time.Second*2, logger)
+	elevator, err := New(buildElevatorTestConfig(), "TestElevator", 0, 10, time.Millisecond*500, time.Second*2)
 	assert.Nil(t, err)
 
 	// Check the initial current floor of the elevator
@@ -67,22 +68,20 @@ func TestElevator_CurrentFloor(t *testing.T) {
 }
 
 func TestElevatorDirections(t *testing.T) {
-	logger := zap.NewNop()
-
 	// Create a new elevator
-	elevator, err := NewElevator("TestElevator", 0, 10, time.Millisecond*500, time.Second*2, logger)
+	elevator, err := New(buildElevatorTestConfig(), "TestElevator", 0, 10, time.Millisecond*500, time.Second*2)
 	assert.Nil(t, err)
 
 	// Check the initial directions of the elevator
 	assert.NotNil(t, elevator.Directions())
-	assert.Empty(t, elevator.Directions().up)
-	assert.Empty(t, elevator.Directions().down)
+	assert.Empty(t, elevator.Directions().Up())
+	assert.Empty(t, elevator.Directions().Down())
 
 	// Add some requests to the elevator
 	elevator.Request(_directionUp, 2, 5)
 	elevator.Request(_directionDown, 8, 3)
 
 	// Check the updated directions of the elevator
-	assert.NotEmpty(t, elevator.Directions().up)
-	assert.NotEmpty(t, elevator.Directions().down)
+	assert.NotEmpty(t, elevator.Directions().Up())
+	assert.NotEmpty(t, elevator.Directions().Down())
 }

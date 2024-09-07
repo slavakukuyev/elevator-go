@@ -1,30 +1,38 @@
-package main
+package directions
 
-import "sync"
+import (
+	"sync"
 
-type Directions struct {
-	up   map[int][]int
-	down map[int][]int
-	mu   sync.RWMutex
+	"github.com/slavakukuyev/elevator-go/internal/infra/config"
+)
+
+type T struct {
+	up             map[int][]int
+	down           map[int][]int
+	mu             sync.RWMutex
+	_directionUp   string
+	_directionDown string
 }
 
-func NewDirections() *Directions {
-	return &Directions{
-		up:   make(map[int][]int),
-		down: make(map[int][]int),
+func New(cfg *config.Config) *T {
+	return &T{
+		up:             make(map[int][]int),
+		down:           make(map[int][]int),
+		_directionUp:   cfg.DirectionUpKey,
+		_directionDown: cfg.DirectionDownKey,
 	}
 }
 
-func (d *Directions) Append(direction string, fromFloor, toFloor int) {
+func (d *T) Append(direction string, fromFloor, toFloor int) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	if direction == _directionUp {
+	if direction == d._directionUp {
 		d.up[fromFloor] = append(d.up[fromFloor], toFloor)
 		return
 	}
 
-	if direction == _directionDown {
+	if direction == d._directionDown {
 		d.down[fromFloor] = append(d.down[fromFloor], toFloor)
 	}
 }
@@ -40,11 +48,11 @@ step 4: delete map[5] // elevator arrived to 5th floor
 the same steps in the opposite direction
 */
 
-func (d *Directions) Flush(direction string, fromFloor int) {
+func (d *T) Flush(direction string, fromFloor int) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	if direction == _directionUp {
+	if direction == d._directionUp {
 		if len(d.up[fromFloor]) > 0 {
 			for _, floor := range d.up[fromFloor] {
 				if _, exists := d.up[floor]; !exists {
@@ -57,7 +65,7 @@ func (d *Directions) Flush(direction string, fromFloor int) {
 		delete(d.up, fromFloor)
 	}
 
-	if direction == _directionDown {
+	if direction == d._directionDown {
 		if len(d.down[fromFloor]) > 0 {
 			for _, floor := range d.down[fromFloor] {
 				if _, exists := d.down[floor]; !exists {
@@ -72,36 +80,36 @@ func (d *Directions) Flush(direction string, fromFloor int) {
 
 }
 
-func (d *Directions) UpDirectionLength() int {
+func (d *T) UpDirectionLength() int {
 	d.mu.RLock()
 	l := len(d.up)
 	d.mu.RUnlock()
 	return l
 }
 
-func (d *Directions) DownDirectionLength() int {
+func (d *T) DownDirectionLength() int {
 	d.mu.RLock()
 	l := len(d.down)
 	d.mu.RUnlock()
 	return l
 }
 
-func (d *Directions) DirectionsLength() int {
+func (d *T) DirectionsLength() int {
 	d.mu.RLock()
 	l := len(d.up) + len(d.down)
 	d.mu.RUnlock()
 	return l
 }
 
-func (d *Directions) IsExisting(direction string, from, to int) bool {
+func (d *T) IsExisting(direction string, from, to int) bool {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
-	if direction == _directionUp && isValueInMapSlice(d.up, from, to) {
+	if direction == d._directionUp && isValueInMapSlice(d.up, from, to) {
 		return true
 	}
 
-	if direction == _directionDown && isValueInMapSlice(d.down, from, to) {
+	if direction == d._directionDown && isValueInMapSlice(d.down, from, to) {
 		return true
 	}
 
@@ -121,4 +129,12 @@ func isValueInMapSlice(m map[int][]int, key, value int) bool {
 	}
 
 	return false
+}
+
+func (d *T) Up() map[int][]int {
+	return d.up
+}
+
+func (d *T) Down() map[int][]int {
+	return d.down
 }

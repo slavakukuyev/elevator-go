@@ -1,23 +1,25 @@
-package main
+package http
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/slavakukuyev/elevator-go/internal/infra/config"
+	"github.com/slavakukuyev/elevator-go/internal/manager"
 	"github.com/slavakukuyev/elevator-go/metrics"
-	"go.uber.org/zap"
 )
 
 // Server represents the HTTP server.
 type Server struct {
-	manager    *Manager
+	manager    *manager.T
 	httpServer *http.Server
-	logger     *zap.Logger
+	cfg        *config.Config
 }
 
 // FloorRequestBody represents the JSON request body.
@@ -38,20 +40,18 @@ type ElevatorRequestBody struct {
 // Parameters:
 // - port (int): The port number to listen on.
 // - manager (*Manager): A pointer to the Manager instance.
-// - logger (*zap.Logger): A pointer to the logger instance.
 //
 // Returns:
 // - A pointer to the new Server instance.
 //
 // Example Usage:
 //
-//	manager := NewManager(zap.NewNop())
-//	logger, _ := zap.NewDevelopment()
-//	server := NewServer(8080, manager, logger)
-func NewServer(port int, manager *Manager, logger *zap.Logger) *Server {
+//	manager := NewManager(slog.NewNop())
+//	server := NewServer(8080, manager)
+func NewServer(cfg *config.Config, port int, manager *manager.T) *Server {
 	s := &Server{
 		manager: manager,
-		logger:  logger.With(zap.String("module", "server")),
+		cfg:     cfg,
 	}
 
 	addr := fmt.Sprintf(":%d", port)
@@ -119,10 +119,10 @@ func (s *Server) floorHandler(w http.ResponseWriter, r *http.Request) {
 	// Request an elevator going from floor 0 to floor 9
 	elevator, err := s.manager.RequestElevator(requestBody.From, requestBody.To)
 	if err != nil {
-		s.logger.Error("request floor error",
-			zap.Error(err),
-			zap.Int("from", requestBody.From),
-			zap.Int("to", requestBody.To),
+		slog.Error("request floor error",
+			slog.String("err", err.Error()),
+			slog.Int("from", requestBody.From),
+			slog.Int("to", requestBody.To),
 		)
 
 		http.Error(w, "request floor error", http.StatusInternalServerError)
@@ -130,7 +130,7 @@ func (s *Server) floorHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if elevator != nil {
-		elevatorName = elevator.name
+		elevatorName = elevator.Name()
 	}
 
 	response := fmt.Sprintf("elevator %s received request: from %d to %d", elevatorName, requestBody.From, requestBody.To)
@@ -138,7 +138,7 @@ func (s *Server) floorHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	if _, err := w.Write([]byte(response)); err != nil {
-		s.logger.Error("response write error", zap.Error(err))
+		slog.Error("response write error", slog.String("err", err.Error()))
 	}
 }
 
@@ -179,12 +179,12 @@ func (s *Server) elevatorHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.manager.AddElevator(requestBody.Name, requestBody.MinFloor, requestBody.MaxFloor, cfg.EachFloorDuration, cfg.OpenDoorDuration, s.logger)
+	err = s.manager.AddElevator(s.cfg, requestBody.Name, requestBody.MinFloor, requestBody.MaxFloor, s.cfg.EachFloorDuration, s.cfg.OpenDoorDuration)
 	if err != nil {
-		s.logger.Error("request elevator error",
-			zap.Error(err),
-			zap.Int("from", requestBody.MinFloor),
-			zap.Int("to", requestBody.MaxFloor),
+		slog.Error("request elevator error",
+			slog.String("err", err.Error()),
+			slog.Int("from", requestBody.MinFloor),
+			slog.Int("to", requestBody.MaxFloor),
 		)
 
 		http.Error(w, "request elevator error", http.StatusInternalServerError)
@@ -195,20 +195,20 @@ func (s *Server) elevatorHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte(response)); err != nil {
-		s.logger.Error("response write error", zap.Error(err))
+		slog.Error("response write error", slog.String("err", err.Error()))
 	}
 }
 
 func (s *Server) Start() {
-	s.logger.Info("Server started", zap.String("Addr", s.httpServer.Addr))
+	slog.Info("Server started", slog.String("Addr", s.httpServer.Addr))
 	err := s.httpServer.ListenAndServe()
 	if err != http.ErrServerClosed {
-		s.logger.Error("Server error on start", zap.Error(err))
+		slog.Error("Server error on start", slog.String("err", err.Error()))
 	}
 }
 
 func (s *Server) Shutdown() {
-	s.logger.Info("Shutting down the server...")
+	slog.Info("Shutting down the server...")
 
 	// Create a context with timeout for graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -216,7 +216,7 @@ func (s *Server) Shutdown() {
 
 	// Shutdown the server
 	if err := s.httpServer.Shutdown(ctx); err != nil {
-		s.logger.Error("Server shutdown error:", zap.Error(err))
+		slog.Error("Server shutdown error:", slog.String("err", err.Error()))
 	}
 
 	os.Exit(0)

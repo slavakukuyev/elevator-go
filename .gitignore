@@ -3,7 +3,6 @@
 #
 # Binaries for programs and plugins
 *.exe
-elevator
 *.exe~
 *.dll
 *.so
@@ -25,3 +24,5 @@ go.work
 machinet.conf
 test_output.json
 elevator-go
+
+out/

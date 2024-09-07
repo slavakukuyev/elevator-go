@@ -7,7 +7,6 @@ This repository contains an Elevator Control System written in Go that simulates
 * create env (done)
 * add GitHub Actions (done)
 * add Logic of floor under 0 like parking (done)
-* use zap logger (done)
 * create docker image (done)
 * create manager algorithm on base of all elevators (done)
 * add handler to creating new elevators for the system (done)
@@ -23,7 +22,7 @@ This repository contains an Elevator Control System written in Go that simulates
 * Versioning of API in URL (example: https://elevator.com/v1/newLift/...)
 * Generic logs function
 * Add metrics to undertsand if some of elevators works harder than others and find a fix if required
-  
+* Replace logger with slog  
 
 ## Docker
 ```bash

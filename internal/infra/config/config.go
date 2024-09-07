@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"time"
@@ -14,15 +14,19 @@ type Config struct {
 
 	EachFloorDuration time.Duration `env:"EACH_FLOOR_DURATION" envDefault:"500ms"`
 	OpenDoorDuration  time.Duration `env:"OPEN_DOOR_DURATION" envDefault:"2s"`
+
+	DirectionUpKey   string
+	DirectionDownKey string
 }
 
-var cfg Config
-
-func initConfig() {
+func InitConfig() *Config {
+	cfg := Config{}
 	if err := env.Parse(&cfg); err != nil {
 		panic("error on parsing env")
 	}
-}
 
-const _directionUp = "up"
-const _directionDown = "down"
+	cfg.DirectionUpKey = "up"
+	cfg.DirectionDownKey = "down"
+
+	return &cfg
+}
