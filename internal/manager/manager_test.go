@@ -9,49 +9,49 @@ import (
 // TestFindNearestElevator tests the findNearestElevator function
 func TestFindNearestElevator(t *testing.T) {
 	// Create some sample elevators
-	e1 := (&elevator.Elevator{}).SetName("1")
-	e2 := (&elevator.Elevator{}).SetName("2")
-	e3 := (&elevator.Elevator{}).SetName("3")
+	e1 := (&elevator.T{}).SetName("1")
+	e2 := (&elevator.T{}).SetName("2")
+	e3 := (&elevator.T{}).SetName("3")
 
 	// Create a struct type to hold each test case
 	type testCase struct {
-		name           string                     // name of the test case
-		elevators      map[*elevator.Elevator]int // map of elevators and their current floors
-		requestedFloor int                        // requested floor
-		want           *elevator.Elevator         // expected elevator
+		name           string              // name of the test case
+		elevators      map[*elevator.T]int // map of elevators and their current floors
+		requestedFloor int                 // requested floor
+		want           *elevator.T         // expected elevator
 	}
 
 	// Create a slice of test cases
 	testCases := []testCase{
 		{
 			name:           "empty map",
-			elevators:      map[*elevator.Elevator]int{},
+			elevators:      map[*elevator.T]int{},
 			requestedFloor: 5,
 			want:           nil,
 		},
 		{
 			name:           "one elevator",
-			elevators:      map[*elevator.Elevator]int{e1: 3},
+			elevators:      map[*elevator.T]int{e1: 3},
 			requestedFloor: 5,
 			want:           e1,
 		},
 		{
 			name:           "two elevators with different distances",
-			elevators:      map[*elevator.Elevator]int{e1: 3, e2: 8},
+			elevators:      map[*elevator.T]int{e1: 3, e2: 8},
 			requestedFloor: 5,
 			want:           e1,
 		},
 
 		{
 			name:           "two elevators with different distances and negative requested floor",
-			elevators:      map[*elevator.Elevator]int{e1: -5, e3: 6},
+			elevators:      map[*elevator.T]int{e1: -5, e3: 6},
 			requestedFloor: -1,
 			want:           e1,
 		},
 
 		{
 			name:           "two elevators with different distances and positive requested floor",
-			elevators:      map[*elevator.Elevator]int{e1: -5, e3: 6},
+			elevators:      map[*elevator.T]int{e1: -5, e3: 6},
 			requestedFloor: 2,
 			want:           e3,
 		},
@@ -76,13 +76,13 @@ func TestFindNearestElevator(t *testing.T) {
 	testCases2 := []testCase{
 		{
 			name:           "two elevators with the same distances and positive requested floor",
-			elevators:      map[*elevator.Elevator]int{e1: 3, e2: 7, e3: 10},
+			elevators:      map[*elevator.T]int{e1: 3, e2: 7, e3: 10},
 			requestedFloor: 5,
 		},
 
 		{
 			name:           "three elevators with the same distances and one negative floor",
-			elevators:      map[*elevator.Elevator]int{e1: -2, e2: 0, e3: 10},
+			elevators:      map[*elevator.T]int{e1: -2, e2: 0, e3: 10},
 			requestedFloor: -1,
 		},
 	}

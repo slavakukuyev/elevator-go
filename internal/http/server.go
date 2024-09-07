@@ -17,7 +17,7 @@ import (
 
 // Server represents the HTTP server.
 type Server struct {
-	manager    *manager.Manager
+	manager    *manager.T
 	httpServer *http.Server
 	cfg        *config.Config
 }
@@ -48,7 +48,7 @@ type ElevatorRequestBody struct {
 //
 //	manager := NewManager(slog.NewNop())
 //	server := NewServer(8080, manager)
-func NewServer(cfg *config.Config, port int, manager *manager.Manager) *Server {
+func NewServer(cfg *config.Config, port int, manager *manager.T) *Server {
 	s := &Server{
 		manager: manager,
 		cfg:     cfg,

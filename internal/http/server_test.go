@@ -15,7 +15,7 @@ import (
 )
 
 func buildServerTestConfig() *config.Config {
-	return &config.Config{DirectionUp: "up", DirectionDown: "down"}
+	return &config.Config{DirectionUpKey: "up", DirectionDownKey: "down"}
 }
 
 func TestElevatorHandler(t *testing.T) {

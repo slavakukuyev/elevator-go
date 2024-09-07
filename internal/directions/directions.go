@@ -6,7 +6,7 @@ import (
 	"github.com/slavakukuyev/elevator-go/internal/infra/config"
 )
 
-type Directions struct {
+type T struct {
 	up             map[int][]int
 	down           map[int][]int
 	mu             sync.RWMutex
@@ -14,16 +14,16 @@ type Directions struct {
 	_directionDown string
 }
 
-func New(cfg *config.Config) *Directions {
-	return &Directions{
+func New(cfg *config.Config) *T {
+	return &T{
 		up:             make(map[int][]int),
 		down:           make(map[int][]int),
-		_directionUp:   cfg.DirectionUp,
-		_directionDown: cfg.DirectionDown,
+		_directionUp:   cfg.DirectionUpKey,
+		_directionDown: cfg.DirectionDownKey,
 	}
 }
 
-func (d *Directions) Append(direction string, fromFloor, toFloor int) {
+func (d *T) Append(direction string, fromFloor, toFloor int) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -48,7 +48,7 @@ step 4: delete map[5] // elevator arrived to 5th floor
 the same steps in the opposite direction
 */
 
-func (d *Directions) Flush(direction string, fromFloor int) {
+func (d *T) Flush(direction string, fromFloor int) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -80,28 +80,28 @@ func (d *Directions) Flush(direction string, fromFloor int) {
 
 }
 
-func (d *Directions) UpDirectionLength() int {
+func (d *T) UpDirectionLength() int {
 	d.mu.RLock()
 	l := len(d.up)
 	d.mu.RUnlock()
 	return l
 }
 
-func (d *Directions) DownDirectionLength() int {
+func (d *T) DownDirectionLength() int {
 	d.mu.RLock()
 	l := len(d.down)
 	d.mu.RUnlock()
 	return l
 }
 
-func (d *Directions) DirectionsLength() int {
+func (d *T) DirectionsLength() int {
 	d.mu.RLock()
 	l := len(d.up) + len(d.down)
 	d.mu.RUnlock()
 	return l
 }
 
-func (d *Directions) IsExisting(direction string, from, to int) bool {
+func (d *T) IsExisting(direction string, from, to int) bool {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
@@ -131,10 +131,10 @@ func isValueInMapSlice(m map[int][]int, key, value int) bool {
 	return false
 }
 
-func (d *Directions) Up() map[int][]int {
+func (d *T) Up() map[int][]int {
 	return d.up
 }
 
-func (d *Directions) Down() map[int][]int {
+func (d *T) Down() map[int][]int {
 	return d.down
 }

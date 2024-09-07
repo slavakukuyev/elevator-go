@@ -8,7 +8,7 @@ import (
 )
 
 func buildDirectionsTestConfig() *config.Config {
-	return &config.Config{DirectionUp: "up", DirectionDown: "down"}
+	return &config.Config{DirectionUpKey: "up", DirectionDownKey: "down"}
 }
 
 func TestDirections_Append(t *testing.T) {

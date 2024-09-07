@@ -10,14 +10,14 @@ import (
 type ElevatorFactory interface {
 	CreateElevator(cfg *config.Config, name string,
 		minFloor, maxFloor int,
-		eachFloorDuration, openDoorDuration time.Duration) (*elevator.Elevator, error)
+		eachFloorDuration, openDoorDuration time.Duration) (*elevator.T, error)
 }
 
 type StandardElevatorFactory struct{}
 
 func (f StandardElevatorFactory) CreateElevator(cfg *config.Config, name string,
 	minFloor, maxFloor int,
-	eachFloorDuration, openDoorDuration time.Duration) (*elevator.Elevator, error) {
+	eachFloorDuration, openDoorDuration time.Duration) (*elevator.T, error) {
 
 	return elevator.New(cfg, name,
 		minFloor, maxFloor,

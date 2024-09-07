@@ -15,20 +15,20 @@ import (
 const _directionUp = "up"
 const _directionDown = "down"
 
-type Manager struct {
+type T struct {
 	mu        sync.RWMutex
-	elevators []*elevator.Elevator
+	elevators []*elevator.T
 	factory   factory.ElevatorFactory
 }
 
-func New(cfg *config.Config, factory factory.ElevatorFactory) *Manager {
-	return &Manager{
-		elevators: []*elevator.Elevator{},
+func New(cfg *config.Config, factory factory.ElevatorFactory) *T {
+	return &T{
+		elevators: []*elevator.T{},
 		factory:   factory,
 	}
 }
 
-func (m *Manager) AddElevator(cfg *config.Config, name string,
+func (m *T) AddElevator(cfg *config.Config, name string,
 	minFloor, maxFloor int,
 	eachFloorDuration, openDoorDuration time.Duration) error {
 	elevator, err := m.factory.CreateElevator(cfg, name,
@@ -41,11 +41,15 @@ func (m *Manager) AddElevator(cfg *config.Config, name string,
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.elevators = append(m.elevators, elevator)
-	slog.Info("new elevator added to the managment pool", slog.String("elevator", elevator.Name()))
+	slog.Info("new elevator added to the managment pool",
+		slog.String("elevator", elevator.Name()),
+		slog.Int("minFllor", elevator.MinFloor()),
+		slog.Int("maxFloor", elevator.MaxFloor()),
+	)
 	return nil
 }
 
-func (m *Manager) RequestElevator(fromFloor, toFloor int) (*elevator.Elevator, error) {
+func (m *T) RequestElevator(fromFloor, toFloor int) (*elevator.T, error) {
 
 	if toFloor == fromFloor {
 		return nil, fmt.Errorf("the requested floor (%d) should be different from your floor (%d)", toFloor, fromFloor)
@@ -60,7 +64,7 @@ func (m *Manager) RequestElevator(fromFloor, toFloor int) (*elevator.Elevator, e
 	elevators := m.elevators
 	m.mu.RUnlock()
 
-	var elevator *elevator.Elevator
+	var elevator *elevator.T
 
 	// validate existing requests
 	if elevator = requestedElevator(elevators, direction, fromFloor, toFloor); elevator != nil {
@@ -78,7 +82,7 @@ func (m *Manager) RequestElevator(fromFloor, toFloor int) (*elevator.Elevator, e
 
 }
 
-func requestedElevator(elevators []*elevator.Elevator, direction string, fromFloor, toFloor int) *elevator.Elevator {
+func requestedElevator(elevators []*elevator.T, direction string, fromFloor, toFloor int) *elevator.T {
 	for _, e := range elevators {
 		if e.Directions().IsExisting(direction, fromFloor, toFloor) {
 			return e
@@ -88,9 +92,9 @@ func requestedElevator(elevators []*elevator.Elevator, direction string, fromFlo
 	return nil
 }
 
-func (m *Manager) chooseElevator(elevators []*elevator.Elevator, requestedDirection string, fromFloor, toFloor int) (*elevator.Elevator, error) {
-	elevatorsWaiting := make(map[*elevator.Elevator]int)
-	elevatorsByDirection := make(map[*elevator.Elevator]string)
+func (m *T) chooseElevator(elevators []*elevator.T, requestedDirection string, fromFloor, toFloor int) (*elevator.T, error) {
+	elevatorsWaiting := make(map[*elevator.T]int)
+	elevatorsByDirection := make(map[*elevator.T]string)
 
 	//case when elevator is waiting to start
 	for _, e := range elevators {
@@ -137,7 +141,7 @@ func (m *Manager) chooseElevator(elevators []*elevator.Elevator, requestedDirect
 	if len(filteredElevators) > 1 {
 		var first bool = true
 		var smallest int
-		var nearestE *elevator.Elevator
+		var nearestE *elevator.T
 
 		for _, e := range filteredElevators {
 			currentFloor := e.CurrentFloor()
@@ -185,7 +189,7 @@ func (m *Manager) chooseElevator(elevators []*elevator.Elevator, requestedDirect
 	}
 
 	if filteredElevatorsLength > 1 {
-		var e *elevator.Elevator
+		var e *elevator.T
 		if requestedDirection == _directionUp {
 			e = elevatorWithMinRequestsByDirection(elevators, _directionDown)
 		} else if requestedDirection == _directionDown {
@@ -205,8 +209,8 @@ func (m *Manager) chooseElevator(elevators []*elevator.Elevator, requestedDirect
 	return nil, fmt.Errorf("no elevator found for reqeusted floors: fromFloor(%d) toFloor(%d) [WTF: One more case]", fromFloor, toFloor)
 }
 
-func elevatorsMatchingDirections(elevatorsByDirection map[*elevator.Elevator]string, requestedDirection string) []*elevator.Elevator {
-	elevators := make([]*elevator.Elevator, 0, len(elevatorsByDirection))
+func elevatorsMatchingDirections(elevatorsByDirection map[*elevator.T]string, requestedDirection string) []*elevator.T {
+	elevators := make([]*elevator.T, 0, len(elevatorsByDirection))
 	for e, sourceDirection := range elevatorsByDirection {
 		if sourceDirection == requestedDirection {
 			elevators = append(elevators, e)
@@ -215,8 +219,8 @@ func elevatorsMatchingDirections(elevatorsByDirection map[*elevator.Elevator]str
 	return elevators
 }
 
-func elevatorsOppositeDirections(elevatorsByDirection map[*elevator.Elevator]string, requestedDirection string) []*elevator.Elevator {
-	elevators := make([]*elevator.Elevator, 0, len(elevatorsByDirection))
+func elevatorsOppositeDirections(elevatorsByDirection map[*elevator.T]string, requestedDirection string) []*elevator.T {
+	elevators := make([]*elevator.T, 0, len(elevatorsByDirection))
 	for e, sourceDirection := range elevatorsByDirection {
 		if sourceDirection != requestedDirection {
 			elevators = append(elevators, e)
@@ -237,7 +241,7 @@ func floorsDiff(floor, requestedFloor int) int {
 	return 0
 }
 
-func findNearestElevator(elevatorsWaiting map[*elevator.Elevator]int, requestedFloor int) *elevator.Elevator {
+func findNearestElevator(elevatorsWaiting map[*elevator.T]int, requestedFloor int) *elevator.T {
 	elevatorsLength := len(elevatorsWaiting)
 	if elevatorsLength == 0 {
 		return nil
@@ -248,7 +252,7 @@ func findNearestElevator(elevatorsWaiting map[*elevator.Elevator]int, requestedF
 			return elevator
 		}
 	}
-	var minDistanceElevators []*elevator.Elevator
+	var minDistanceElevators []*elevator.T
 	minDistance := -1
 
 	for el, floor := range elevatorsWaiting {
@@ -260,7 +264,7 @@ func findNearestElevator(elevatorsWaiting map[*elevator.Elevator]int, requestedF
 			minDistance = distance
 		} else if distance < minDistance {
 			// If it's closer than the previous ones, reset the list.
-			minDistanceElevators = []*elevator.Elevator{el}
+			minDistanceElevators = []*elevator.T{el}
 			minDistance = distance
 		}
 	}
@@ -283,8 +287,8 @@ func findNearestElevator(elevatorsWaiting map[*elevator.Elevator]int, requestedF
 // - direction: The requested direction ("up", "down", or empty for any direction).
 // Returns:
 // - An Elevator pointer representing the selected elevator.
-func elevatorWithMinRequestsByDirection(elevators []*elevator.Elevator, direction string) *elevator.Elevator {
-	var elevator *elevator.Elevator
+func elevatorWithMinRequestsByDirection(elevators []*elevator.T, direction string) *elevator.T {
+	var elevator *elevator.T
 	var smallest int
 	var first bool = true
 
