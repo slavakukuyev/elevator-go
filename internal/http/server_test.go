@@ -202,7 +202,7 @@ func TestFloorHandler_Comprehensive(t *testing.T) {
 			elevatorSetup:  true,
 		},
 		{
-			name:   "valid down request", 
+			name:   "valid down request",
 			method: "POST",
 			requestBody: FloorRequestBody{
 				From: 15,
@@ -231,7 +231,7 @@ func TestFloorHandler_Comprehensive(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			elevatorSetup:  true,
 		},
-		
+
 		// Validation error test cases - these should return 400 Bad Request
 		{
 			name:   "same floor request should fail", // Cannot request same from/to floor
@@ -266,7 +266,7 @@ func TestFloorHandler_Comprehensive(t *testing.T) {
 			expectError:    true,
 			elevatorSetup:  true,
 		},
-		
+
 		// HTTP method validation test cases - these should return 405 Method Not Allowed
 		{
 			name:           "invalid HTTP method", // Only POST is allowed for floor requests
@@ -276,7 +276,7 @@ func TestFloorHandler_Comprehensive(t *testing.T) {
 			expectError:    true,
 			elevatorSetup:  true,
 		},
-		
+
 		// Request format error test cases - these should return 400 Bad Request
 		{
 			name:           "invalid JSON body", // Malformed JSON should return 400
@@ -286,7 +286,7 @@ func TestFloorHandler_Comprehensive(t *testing.T) {
 			expectError:    true,
 			elevatorSetup:  true,
 		},
-		
+
 		// System state error test cases - these should return 500 Internal Server Error
 		{
 			name:   "no elevators available", // System error when no elevators exist

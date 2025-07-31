@@ -38,6 +38,11 @@ type AcceptanceTestSuite struct {
 	cancel  context.CancelFunc
 }
 
+// T returns the underlying testing.T instance to satisfy the type checker
+func (suite *AcceptanceTestSuite) T() *testing.T {
+	return suite.Suite.T()
+}
+
 // SetupSuite initializes the test suite once
 func (suite *AcceptanceTestSuite) SetupSuite() {
 	// Suppress all logging during tests to reduce noise
