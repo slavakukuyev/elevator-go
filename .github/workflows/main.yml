@@ -22,7 +22,7 @@ jobs:
     - name: Install golangci-lint
       uses: golangci/golangci-lint-action@v7
       with:
-        version: 2.3.0
+        version: v2.3.0
 
     - name: Build Docker image
       run: docker build -t elevator-go -f ./build/package/Dockerfile .
