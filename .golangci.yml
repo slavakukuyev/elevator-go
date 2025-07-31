@@ -4,7 +4,7 @@ run:
   timeout: 3m
 
 linters:
-  disable-all: true
+  disable_all: true
   enable:
     ## enabled by default
     - errcheck # checking for unchecked errors, these unchecked errors can be critical bugs in some cases
@@ -67,7 +67,7 @@ linters:
     - whitespace # detects leading and trailing whitespace
 
 # All possible options can be found here https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
-linters-settings:
+linters_settings:
   errcheck:
     # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
     # Such cases aren't reported by default.
@@ -254,7 +254,7 @@ issues:
   # Default: 3
   max-same-issues: 50
 
-  exclude-rules:
+  exclude_rules:
     - source: "(noinspection|TODO)"
       linters: [ godot ]
     - source: "//noinspection"
