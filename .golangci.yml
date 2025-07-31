@@ -68,25 +68,25 @@ linters:
 
   settings:
     errcheck:
-      # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
-      # Such cases aren't reported by default.
+      # Report about not checking of errors in type assertions: `a := b.(MyStruct)`
+      # Such cases aren't reported by default
       # Default: false
       check-type-assertions: true
 
     exhaustive:
-      # Program elements to check for exhaustiveness.
+      # Program elements to check for exhaustiveness
       # Default: [ switch ]
       check:
         - switch
         - map
       # Presence of "default" case in switch statements satisfies exhaustiveness,
-      # even if all enum members are not listed.
+      # even if all enum members are not listed
       # Default: false
       default-signifies-exhaustive: true
 
     exhaustruct:
-      # List of regular expressions to exclude struct packages and their names from checks.
-      # Regular expressions must match complete canonical struct package/name/structname.
+      # List of regular expressions to exclude struct packages and their names from checks
+      # Regular expressions must match complete canonical struct package/name/structname
       # Default: []
       exclude:
         # std libs
@@ -114,37 +114,37 @@ linters:
         - "^gopkg.in/yaml.v3.Node$"
 
     funlen:
-      # Checks the number of lines in a function.
-      # If lower than 0, disable the check.
+      # Checks the number of lines in a function
+      # If lower than 0, disable the check
       # Default: 60
       lines: 100
-      # Checks the number of statements in a function.
-      # If lower than 0, disable the check.
+      # Checks the number of statements in a function
+      # If lower than 0, disable the check
       # Default: 40
       statements: 50
-      # Ignore comments when counting lines.
+      # Ignore comments when counting lines
       # Default false
       ignore-comments: true
 
     gocritic:
-      # Settings passed to gocritic.
-      # The settings key is the name of a supported gocritic checker.
-      # The list of supported checkers can be find in https://go-critic.github.io/overview.
+      # Settings passed to gocritic
+      # The settings key is the name of a supported gocritic checker
+      # The list of supported checkers can be find in https://go-critic.github.io/overview
       disabled-checks:
         - commentFormatting
       settings:
         captLocal:
-          # Whether to restrict checker to params only.
+          # Whether to restrict checker to params only
           # Default: true
           paramsOnly: false
         underef:
-          # Whether to skip (*x).method() calls where x is a pointer receiver.
+          # Whether to skip (*x).method() calls where x is a pointer receiver
           # Default: true
           skipRecvDeref: false
 
     gomodguard:
       blocked:
-        # List of blocked modules.
+        # List of blocked modules
         # Default: []
         modules:
           - github.com/golang/protobuf:
@@ -161,44 +161,44 @@ linters:
               reason: "gofrs' package was not go module before v5"
 
     govet:
-      # Enable all analyzers.
+      # Enable all analyzers
       # Default: false
       enable-all: true
-      # Disable analyzers by name.
-      # Run `go tool vet help` to see all analyzers.
+      # Disable analyzers by name
+      # Run `go tool vet help` to see all analyzers
       # Default: []
       disable:
         - fieldalignment # too strict
-      # Settings per analyzer.
+      # Settings per analyzer
       settings:
         shadow:
-          # Whether to be strict about shadowing; can be noisy.
+          # Whether to be strict about shadowing; can be noisy
           # Default: false
           strict: false
 
     inamedparam:
-      # Skips check for interface methods with only a single parameter.
+      # Skips check for interface methods with only a single parameter
       # Default: false
       skip-single-param: true
 
     nakedret:
-      # Make an issue if func has more lines of code than this setting, and it has naked returns.
+      # Make an issue if func has more lines of code than this setting, and it has naked returns
       # Default: 30
       max-func-lines: 0
 
     nolintlint:
-      # Exclude following linters from requiring an explanation.
+      # Exclude following linters from requiring an explanation
       # Default: []
       allow-no-explanation: [ funlen, lll ]
-      # Enable to require an explanation of nonzero length after each nolint directive.
+      # Enable to require an explanation of nonzero length after each nolint directive
       # Default: false
       require-explanation: true
-      # Enable to require nolint directives to mention the specific linter being suppressed.
+      # Enable to require nolint directives to mention the specific linter being suppressed
       # Default: false
       require-specific: true
 
     perfsprint:
-      # Optimizes into strings concatenation.
+      # Optimizes into strings concatenation
       # Default: true
       strconcat: false
 
@@ -235,7 +235,6 @@ linters:
         - name: unreachable-code
         - name: var-declaration
 
-
     rowserrcheck:
       # database/sql is always checked
       # Default: []
@@ -248,22 +247,23 @@ linters:
         - require-error
 
 issues:
-  # Maximum count of issues with the same text.
-  # Set to 0 to disable.
+  # Maximum count of issues with the same text
+  # Set to 0 to disable
   # Default: 3
   max-same-issues: 50
 
-  exclude-rules:
-    - source: "(noinspection|TODO)"
-      linters: [ godot ]
-    - source: "//noinspection"
-      linters: [ gocritic ]
-    - path: "_test\\.go"
-      linters:
-        - bodyclose
-        - funlen
-        - goconst
-        - gosec
-        - lll
-        - noctx
-        - wrapcheck
+  exclusions:
+    rules:
+      - source: "(noinspection|TODO)"
+        linters: [ godot ]
+      - source: "//noinspection"
+        linters: [ gocritic ]
+      - path: "_test\\.go"
+        linters:
+          - bodyclose
+          - funlen
+          - goconst
+          - gosec
+          - lll
+          - noctx
+          - wrapcheck
