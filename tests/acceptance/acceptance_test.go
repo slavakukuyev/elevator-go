@@ -401,7 +401,11 @@ func (suite *AcceptanceTestSuite) TestEdgeCasesAndErrorHandling() {
 			t.Run(tc.name, func(t *testing.T) {
 				resp, err := http.Post(suite.testSrv.URL+tc.endpoint, "application/json", strings.NewReader(tc.body))
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer func() {
+					if err := resp.Body.Close(); err != nil {
+						t.Logf("Failed to close response body: %v", err)
+					}
+				}()
 				assert.Equal(t, tc.expected, resp.StatusCode)
 			})
 		}
@@ -439,7 +443,9 @@ func (suite *AcceptanceTestSuite) TestWebSocketStatusUpdates() {
 
 		// Make a floor request to trigger status change
 		resp := suite.requestFloor(2, 8)
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			t.Logf("Failed to close response body: %v", err)
+		}
 
 		// Read updated status with timeout
 		if err := ws.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
@@ -471,7 +477,9 @@ func (suite *AcceptanceTestSuite) TestSystemPerformance() {
 			resp := suite.requestFloor(i%15, (i%15)+3)
 			duration := time.Since(start)
 			totalDuration += duration
-			resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
 
 			if resp.StatusCode == http.StatusOK {
 				successCount++
