@@ -381,10 +381,8 @@ func validateEnvironmentSpecificConfig(cfg *Config) error {
 	}
 
 	// Development environment warnings (would be logged, not errors)
-	if cfg.IsDevelopment() && !cfg.LogRequestDetails {
-		// This would be a warning in logs: "Consider enabling LogRequestDetails in development"
-		// For now, we just note this configuration without logging
-	}
+	// In development, we might want to warn about LogRequestDetails being disabled
+	// but for now we don't log anything to avoid noise
 
 	// Testing environment validations
 	if cfg.IsTesting() {

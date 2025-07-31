@@ -415,7 +415,9 @@ func TestAgentDetector(t *testing.T) {
 
 		for _, envVar := range envVarsToCheck {
 			originalEnvVars[envVar] = os.Getenv(envVar)
-			os.Unsetenv(envVar)
+			if err := os.Unsetenv(envVar); err != nil {
+				t.Logf("Failed to unset environment variable %s: %v", envVar, err)
+			}
 		}
 
 		config := detector.DetectAgents()
@@ -428,22 +430,36 @@ func TestAgentDetector(t *testing.T) {
 		// Restore environment variables
 		for envVar, value := range originalEnvVars {
 			if value != "" {
-				os.Setenv(envVar, value)
+				if err := os.Setenv(envVar, value); err != nil {
+					t.Logf("Failed to restore environment variable %s: %v", envVar, err)
+				}
 			}
 		}
 	})
 
 	t.Run("detect DataDog agent", func(t *testing.T) {
-		os.Setenv("DD_API_KEY", "test-key")
-		defer os.Unsetenv("DD_API_KEY")
+		if err := os.Setenv("DD_API_KEY", "test-key"); err != nil {
+			t.Fatalf("Failed to set DD_API_KEY: %v", err)
+		}
+		defer func() {
+			if err := os.Unsetenv("DD_API_KEY"); err != nil {
+				t.Logf("Failed to unset DD_API_KEY: %v", err)
+			}
+		}()
 
 		config := detector.DetectAgents()
 		assert.True(t, config.DataDogEnabled)
 	})
 
 	t.Run("detect FluentBit agent", func(t *testing.T) {
-		os.Setenv("FLUENTD_HOST", "localhost")
-		defer os.Unsetenv("FLUENTD_HOST")
+		if err := os.Setenv("FLUENTD_HOST", "localhost"); err != nil {
+			t.Fatalf("Failed to set FLUENTD_HOST: %v", err)
+		}
+		defer func() {
+			if err := os.Unsetenv("FLUENTD_HOST"); err != nil {
+				t.Logf("Failed to unset FLUENTD_HOST: %v", err)
+			}
+		}()
 
 		config := detector.DetectAgents()
 		assert.True(t, config.FluentBitEnabled)

@@ -184,7 +184,9 @@ func (suite *AcceptanceTestSuite) TestElevatorCreationAndBasicOperations() {
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		resp = suite.requestFloor(10, 40)
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("Failed to close response body: %v", err)
+		}
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
@@ -234,7 +236,11 @@ func (suite *AcceptanceTestSuite) TestElevatorOptimization() {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				resp := suite.requestFloor(tc.from, tc.to)
-				defer resp.Body.Close()
+				defer func() {
+					if err := resp.Body.Close(); err != nil {
+						log.Printf("Failed to close response body: %v", err)
+					}
+				}()
 				assert.Equal(t, http.StatusOK, resp.StatusCode)
 			})
 		}
@@ -270,7 +276,11 @@ func (suite *AcceptanceTestSuite) TestRushHourScenario() {
 				}
 
 				resp := suite.requestFloorWithTimeout(from, to, 5*time.Second)
-				defer resp.Body.Close()
+				defer func() {
+					if err := resp.Body.Close(); err != nil {
+						log.Printf("Failed to close response body: %v", err)
+					}
+				}()
 
 				mu.Lock()
 				if resp.StatusCode == http.StatusOK {

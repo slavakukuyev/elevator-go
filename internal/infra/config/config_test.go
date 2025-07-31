@@ -858,7 +858,9 @@ func clearEnvVars() func() {
 	return func() {
 		for _, envVar := range envVars {
 			if originalValue, exists := originalValues[envVar]; exists && originalValue != "" {
-				os.Setenv(envVar, originalValue)
+				if err := os.Setenv(envVar, originalValue); err != nil {
+					fmt.Printf("Failed to restore environment variable %s: %v\n", envVar, err)
+				}
 			} else {
 				if err := os.Unsetenv(envVar); err != nil {
 					// Log but don't fail, as this is cleanup code
