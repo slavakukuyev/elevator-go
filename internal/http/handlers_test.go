@@ -246,7 +246,7 @@ func createRequestWithContext(method, path string, body string, requestID string
 		req = httptest.NewRequest(method, path, nil)
 	}
 
-	ctx := context.WithValue(req.Context(), "request_id", requestID)
+	ctx := context.WithValue(req.Context(), requestIDKey, requestID)
 	return req.WithContext(ctx)
 }
 

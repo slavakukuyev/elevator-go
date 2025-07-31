@@ -328,9 +328,3 @@ func TestDirections_RegressionPrevention(t *testing.T) {
 		assert.True(t, directions.IsIdle(), "Elevator should be idle after all destinations visited")
 	})
 }
-
-// Helper function to determine if elevator should be idle
-// This function now delegates to the proper IsIdle() method
-func isElevatorIdle(directions *Manager) bool {
-	return directions.IsIdle()
-}

@@ -19,11 +19,19 @@ import (
 
 func buildManagerTestConfig() *config.Config {
 	// Set testing environment to get proper defaults including timeouts
-	os.Setenv("ENV", "testing")
-	os.Setenv("LOG_LEVEL", "ERROR")
+	if err := os.Setenv("ENV", "testing"); err != nil {
+		panic(fmt.Sprintf("Failed to set ENV variable: %v", err))
+	}
+	if err := os.Setenv("LOG_LEVEL", "ERROR"); err != nil {
+		panic(fmt.Sprintf("Failed to set LOG_LEVEL variable: %v", err))
+	}
 	defer func() {
-		os.Unsetenv("ENV")
-		os.Unsetenv("LOG_LEVEL")
+		if err := os.Unsetenv("ENV"); err != nil {
+			fmt.Printf("Failed to unset ENV variable: %v\n", err)
+		}
+		if err := os.Unsetenv("LOG_LEVEL"); err != nil {
+			fmt.Printf("Failed to unset LOG_LEVEL variable: %v\n", err)
+		}
 	}()
 
 	cfg, err := config.InitConfig()

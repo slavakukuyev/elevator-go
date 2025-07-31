@@ -117,7 +117,11 @@ func (suite *AcceptanceTestSuite) createElevator(name string, minFloor, maxFloor
 
 	resp, err := http.Post(suite.testSrv.URL+"/elevator", "application/json", bytes.NewBuffer(jsonBody))
 	require.NoError(suite.T(), err)
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("Failed to close response body: %v", err)
+		}
+	}()
 
 	assert.Equal(suite.T(), http.StatusOK, resp.StatusCode)
 
@@ -168,11 +172,15 @@ func (suite *AcceptanceTestSuite) TestElevatorCreationAndBasicOperations() {
 
 		// Verify elevators were created by making requests
 		resp := suite.requestFloor(1, 10)
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("Failed to close response body: %v", err)
+		}
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		resp = suite.requestFloor(-3, 2)
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("Failed to close response body: %v", err)
+		}
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		resp = suite.requestFloor(10, 40)
@@ -376,7 +384,11 @@ func (suite *AcceptanceTestSuite) TestWebSocketStatusUpdates() {
 			return
 		}
 		require.NoError(t, err)
-		defer ws.Close()
+		defer func() {
+			if err := ws.Close(); err != nil {
+				log.Printf("Failed to close WebSocket connection: %v", err)
+			}
+		}()
 
 		// Read initial status with timeout
 		if err := ws.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {

@@ -381,10 +381,9 @@ func validateEnvironmentSpecificConfig(cfg *Config) error {
 	}
 
 	// Development environment warnings (would be logged, not errors)
-	if cfg.IsDevelopment() {
-		if !cfg.LogRequestDetails {
-			// This would be a warning in logs: "Consider enabling LogRequestDetails in development"
-		}
+	if cfg.IsDevelopment() && !cfg.LogRequestDetails {
+		// This would be a warning in logs: "Consider enabling LogRequestDetails in development"
+		// For now, we just note this configuration without logging
 	}
 
 	// Testing environment validations
@@ -506,15 +505,7 @@ func validateHTTPConfiguration(config HTTPConfig) error {
 	return nil
 }
 
-// validateMonitoringConfiguration validates monitoring-specific configuration
-func validateMonitoringConfiguration(config MonitoringConfig) error {
-	if config.StatusUpdateInterval <= 0 {
-		return domain.NewValidationError("status update interval must be positive", nil).
-			WithContext("interval", config.StatusUpdateInterval)
-	}
 
-	return nil
-}
 
 // validateCircuitBreakerConfiguration validates circuit breaker configuration
 func validateCircuitBreakerConfiguration(config CircuitBreakerConfig) error {

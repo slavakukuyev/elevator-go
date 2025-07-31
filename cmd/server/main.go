@@ -168,11 +168,9 @@ func main() {
 	slog.InfoContext(ctx, "elevator manager shutdown completed")
 
 	// Wait for a short grace period before final exit
-	select {
-	case <-time.After(cfg.ShutdownGrace):
-		slog.InfoContext(ctx, "graceful shutdown completed",
-			slog.Duration("grace_period", cfg.ShutdownGrace))
-	}
+	<-time.After(cfg.ShutdownGrace)
+	slog.InfoContext(ctx, "graceful shutdown completed",
+		slog.Duration("grace_period", cfg.ShutdownGrace))
 }
 
 // shutdownServers gracefully shuts down both HTTP and WebSocket servers

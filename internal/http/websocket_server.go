@@ -95,7 +95,9 @@ func (ws *WebSocketServer) closeAllConnections() {
 			ws.logger.Error("failed to send close message", slog.String("error", err.Error()))
 		}
 		cancel()
-		conn.Close()
+		if err := conn.Close(); err != nil {
+			ws.logger.Error("failed to close WebSocket connection", slog.String("error", err.Error()))
+		}
 	}
 	// Clear the map
 	ws.connections = make(map[*websocket.Conn]context.CancelFunc)
@@ -109,7 +111,11 @@ func (ws *WebSocketServer) statusHandler(w http.ResponseWriter, r *http.Request)
 		ws.logger.Error("WebSocket upgrade failed", slog.String("error", err.Error()))
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			ws.logger.Error("failed to close WebSocket connection", slog.String("error", err.Error()))
+		}
+	}()
 
 	// Create a context for this connection that cancels when the connection closes
 	ctx, cancel := context.WithCancel(ws.ctx)

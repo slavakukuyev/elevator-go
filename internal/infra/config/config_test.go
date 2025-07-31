@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -58,7 +59,9 @@ func TestInitConfig_EnvironmentVariables(t *testing.T) {
 	}
 
 	for key, value := range envVars {
-		os.Setenv(key, value)
+		if err := os.Setenv(key, value); err != nil {
+			t.Fatalf("Failed to set environment variable %s: %v", key, err)
+		}
 	}
 
 	cfg, err := InitConfig()
@@ -84,7 +87,9 @@ func TestEnvironmentDefaults_Development(t *testing.T) {
 	cleanupEnv := clearEnvVars()
 	defer cleanupEnv()
 
-	os.Setenv("ENV", "development")
+	if err := os.Setenv("ENV", "development"); err != nil {
+		t.Fatalf("Failed to set ENV variable: %v", err)
+	}
 
 	cfg, err := InitConfig()
 	require.NoError(t, err)
@@ -102,7 +107,9 @@ func TestEnvironmentDefaults_Testing(t *testing.T) {
 	cleanupEnv := clearEnvVars()
 	defer cleanupEnv()
 
-	os.Setenv("ENV", "testing")
+	if err := os.Setenv("ENV", "testing"); err != nil {
+		t.Fatalf("Failed to set ENV variable: %v", err)
+	}
 
 	cfg, err := InitConfig()
 	require.NoError(t, err)
@@ -130,7 +137,9 @@ func TestEnvironmentDefaults_Production(t *testing.T) {
 	cleanupEnv := clearEnvVars()
 	defer cleanupEnv()
 
-	os.Setenv("ENV", "production")
+	if err := os.Setenv("ENV", "production"); err != nil {
+		t.Fatalf("Failed to set ENV variable: %v", err)
+	}
 
 	cfg, err := InitConfig()
 	require.NoError(t, err)
@@ -171,7 +180,9 @@ func TestConfigValidation_ValidConfiguration(t *testing.T) {
 	}
 
 	for key, value := range envVars {
-		os.Setenv(key, value)
+		if err := os.Setenv(key, value); err != nil {
+			t.Fatalf("Failed to set environment variable %s: %v", key, err)
+		}
 	}
 
 	cfg, err := InitConfig()
@@ -217,8 +228,12 @@ func TestConfigValidation_InvalidFloorConfiguration(t *testing.T) {
 			cleanupEnv := clearEnvVars()
 			defer cleanupEnv()
 
-			os.Setenv("DEFAULT_MIN_FLOOR", tt.minFloor)
-			os.Setenv("DEFAULT_MAX_FLOOR", tt.maxFloor)
+			if err := os.Setenv("DEFAULT_MIN_FLOOR", tt.minFloor); err != nil {
+				t.Fatalf("Failed to set DEFAULT_MIN_FLOOR variable: %v", err)
+			}
+			if err := os.Setenv("DEFAULT_MAX_FLOOR", tt.maxFloor); err != nil {
+				t.Fatalf("Failed to set DEFAULT_MAX_FLOOR variable: %v", err)
+			}
 
 			cfg, err := InitConfig()
 			require.Error(t, err)
@@ -261,7 +276,9 @@ func TestConfigValidation_InvalidPortConfiguration(t *testing.T) {
 			cleanupEnv := clearEnvVars()
 			defer cleanupEnv()
 
-			os.Setenv("PORT", tt.port)
+			if err := os.Setenv("PORT", tt.port); err != nil {
+				t.Fatalf("Failed to set PORT variable: %v", err)
+			}
 
 			cfg, err := InitConfig()
 			require.Error(t, err)
@@ -297,7 +314,9 @@ func TestConfigValidation_InvalidDurationConfiguration(t *testing.T) {
 			cleanupEnv := clearEnvVars()
 			defer cleanupEnv()
 
-			os.Setenv(tt.envVar, tt.value)
+			if err := os.Setenv(tt.envVar, tt.value); err != nil {
+				t.Fatalf("Failed to set environment variable %s: %v", tt.envVar, err)
+			}
 
 			cfg, err := InitConfig()
 			require.Error(t, err)
@@ -335,7 +354,9 @@ func TestConfigValidation_InvalidMaxElevators(t *testing.T) {
 			cleanupEnv := clearEnvVars()
 			defer cleanupEnv()
 
-			os.Setenv("MAX_ELEVATORS", tt.maxElevators)
+			if err := os.Setenv("MAX_ELEVATORS", tt.maxElevators); err != nil {
+				t.Fatalf("Failed to set MAX_ELEVATORS variable: %v", err)
+			}
 
 			cfg, err := InitConfig()
 			require.Error(t, err)
@@ -742,7 +763,9 @@ func TestConfigBoundaryValues(t *testing.T) {
 	}
 
 	for key, value := range envVars {
-		os.Setenv(key, value)
+		if err := os.Setenv(key, value); err != nil {
+			t.Fatalf("Failed to set environment variable %s: %v", key, err)
+		}
 	}
 
 	cfg, err := InitConfig()
@@ -774,7 +797,9 @@ func TestConfigWithAlternativeEnvironmentNames(t *testing.T) {
 			cleanupEnv := clearEnvVars()
 			defer cleanupEnv()
 
-			os.Setenv("ENV", env.envName)
+			if err := os.Setenv("ENV", env.envName); err != nil {
+				t.Fatalf("Failed to set ENV variable: %v", err)
+			}
 
 			cfg, err := InitConfig()
 			require.NoError(t, err)
@@ -823,7 +848,10 @@ func clearEnvVars() func() {
 	originalValues := make(map[string]string)
 	for _, envVar := range envVars {
 		originalValues[envVar] = os.Getenv(envVar)
-		os.Unsetenv(envVar)
+		if err := os.Unsetenv(envVar); err != nil {
+			// Log but don't fail, as this is cleanup code
+			fmt.Printf("Failed to unset environment variable %s: %v\n", envVar, err)
+		}
 	}
 
 	// Return cleanup function
@@ -832,7 +860,10 @@ func clearEnvVars() func() {
 			if originalValue, exists := originalValues[envVar]; exists && originalValue != "" {
 				os.Setenv(envVar, originalValue)
 			} else {
-				os.Unsetenv(envVar)
+				if err := os.Unsetenv(envVar); err != nil {
+					// Log but don't fail, as this is cleanup code
+					fmt.Printf("Failed to unset environment variable %s: %v\n", envVar, err)
+				}
 			}
 		}
 	}

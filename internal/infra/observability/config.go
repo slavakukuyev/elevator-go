@@ -576,7 +576,7 @@ func (c *ObservabilityConfig) Validate() error {
 
 	// Validate Elasticsearch configuration
 	if c.Elastic.Enabled && c.Elastic.Host == "" {
-		return fmt.Errorf("Elasticsearch host must be specified when Elastic is enabled")
+		return fmt.Errorf("elasticsearch host must be specified when Elastic is enabled")
 	}
 
 	// Validate sampling ratios

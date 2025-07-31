@@ -131,7 +131,7 @@ type PrometheusClient struct {
 // NewPrometheusClient creates a new Prometheus push client
 func NewPrometheusClient(config *PrometheusConfig, logger *slog.Logger) (*PrometheusClient, error) {
 	if !config.PushEnabled || config.PushGateway == "" {
-		return nil, fmt.Errorf("Prometheus push gateway not configured")
+		return nil, fmt.Errorf("prometheus push gateway not configured")
 	}
 
 	return &PrometheusClient{

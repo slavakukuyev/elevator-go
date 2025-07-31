@@ -274,10 +274,13 @@ func (s *Server) detailedHealthHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	statusCode := http.StatusOK
-	if overallStatus == health.StatusUnhealthy {
+	switch overallStatus {
+	case health.StatusUnhealthy:
 		statusCode = http.StatusServiceUnavailable
-	} else if overallStatus == health.StatusDegraded {
+	case health.StatusDegraded:
 		statusCode = http.StatusOK // Still serving traffic but degraded
+	default:
+		statusCode = http.StatusOK
 	}
 
 	w.WriteHeader(statusCode)

@@ -393,7 +393,7 @@ func TestGenerateRequestID(t *testing.T) {
 func TestGetRequestID(t *testing.T) {
 	t.Run("returns request ID from context", func(t *testing.T) {
 		expectedID := "context-123"
-		ctx := context.WithValue(context.Background(), "request_id", expectedID)
+		ctx := context.WithValue(context.Background(), requestIDKey, expectedID)
 		r := httptest.NewRequest("GET", "/test", nil)
 		r = r.WithContext(ctx)
 

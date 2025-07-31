@@ -596,15 +596,6 @@ func TestTelemetryProviderIntegration(t *testing.T) {
 
 // Mock implementations for testing
 
-type mockClient struct {
-	closed bool
-}
-
-func (m *mockClient) Close() error {
-	m.closed = true
-	return nil
-}
-
 func TestTelemetryProvider_ContextualLogging(t *testing.T) {
 	t.Run("middleware preserves request context", func(t *testing.T) {
 		logger := slog.Default()

@@ -608,10 +608,13 @@ func (m *Manager) GetMetrics() map[string]interface{} {
 		// Update circuit breaker metrics
 		if cbState, ok := healthMetrics["circuit_breaker_state"].(string); ok {
 			stateValue := 0.0 // closed
-			if cbState == "half-open" {
+			switch cbState {
+			case "half-open":
 				stateValue = 1.0
-			} else if cbState == "open" {
+			case "open":
 				stateValue = 2.0
+			default:
+				stateValue = 0.0
 			}
 			metrics.SetCircuitBreakerState(e.Name(), stateValue)
 		}

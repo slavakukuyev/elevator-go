@@ -3,7 +3,6 @@ package elevator
 import (
 	"context"
 	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/slavakukuyev/elevator-go/internal/constants"
@@ -15,7 +14,6 @@ import (
 type Elevator struct {
 	state             *State
 	directionsManager *directions.Manager
-	mu                sync.RWMutex
 	ctx               context.Context
 	cancel            context.CancelFunc
 	switchOnChan      chan struct{} // Channel for status updates - using struct{} for zero memory

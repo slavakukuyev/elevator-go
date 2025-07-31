@@ -9,22 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/slavakukuyev/elevator-go/internal/constants"
 	"github.com/slavakukuyev/elevator-go/internal/directions"
 	"github.com/slavakukuyev/elevator-go/internal/domain"
-	"github.com/slavakukuyev/elevator-go/internal/infra/config"
 )
-
-func buildElevatorTestConfig() *config.Config {
-	return &config.Config{
-		LogLevel:          constants.DefaultLogLevel,
-		Port:              constants.DefaultPort,
-		MinFloor:          constants.DefaultMinFloor,
-		MaxFloor:          constants.DefaultMaxFloor,
-		EachFloorDuration: time.Millisecond * 10, // Fast for testing
-		OpenDoorDuration:  time.Millisecond * 10, // Fast for testing
-	}
-}
 
 func TestElevator_New(t *testing.T) {
 	tests := []struct {

@@ -18,6 +18,13 @@ import (
 	"github.com/slavakukuyev/elevator-go/metrics"
 )
 
+// contextKey is a custom type for context keys to avoid collisions
+type contextKey string
+
+const (
+	requestIDKey contextKey = "request_id"
+)
+
 // Middleware represents a middleware function
 type Middleware func(http.Handler) http.Handler
 
@@ -62,6 +69,7 @@ func LoggingMiddleware(logger *slog.Logger) Middleware {
 				ResponseWriter: w,
 				statusCode:     http.StatusOK,
 				bytesWritten:   0,
+				r:              r,
 			}
 
 			// Log request start
@@ -97,9 +105,10 @@ func LoggingMiddleware(logger *slog.Logger) Middleware {
 			}
 
 			// Update system performance metrics
-			if endpoint == "/v1/floors/request" || endpoint == "/floor" {
+			switch endpoint {
+			case "/v1/floors/request", "/floor":
 				metrics.SetAvgResponseTime("elevator_request", duration.Seconds())
-			} else if endpoint == "/v1/health" || endpoint == "/health" {
+			case "/v1/health", "/health":
 				metrics.SetAvgResponseTime("health_check", duration.Seconds())
 			}
 
@@ -338,7 +347,7 @@ func generateRequestID() string {
 
 // getRequestID extracts request ID from context or request
 func getRequestID(r *http.Request) string {
-	if requestID := r.Context().Value("request_id"); requestID != nil {
+	if requestID := r.Context().Value(requestIDKey); requestID != nil {
 		return requestID.(string)
 	}
 	return generateRequestID()
@@ -372,6 +381,7 @@ type responseWriterWrapper struct {
 	http.ResponseWriter
 	statusCode   int
 	bytesWritten int64
+	r            *http.Request
 }
 
 func (w *responseWriterWrapper) WriteHeader(statusCode int) {
@@ -401,11 +411,14 @@ func (w *responseWriterWrapper) Flush() {
 
 // CloseNotify implements http.CloseNotifier interface (deprecated but might be needed)
 func (w *responseWriterWrapper) CloseNotify() <-chan bool {
-	if notifier, ok := w.ResponseWriter.(http.CloseNotifier); ok {
-		return notifier.CloseNotify()
-	}
-	// Return a channel that will never receive a value
-	return make(<-chan bool)
+	// Since CloseNotifier is deprecated, we use the request context instead
+	// which provides better cancellation handling
+	ch := make(chan bool, 1)
+	go func() {
+		<-w.r.Context().Done()
+		ch <- true
+	}()
+	return ch
 }
 
 // Push implements http.Pusher interface for HTTP/2 server push
