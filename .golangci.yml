@@ -253,7 +253,7 @@ issues:
   # Default: 3
   max-same-issues: 50
 
-  exclude_rules:
+  exclude-rules:
     - source: "(noinspection|TODO)"
       linters: [ godot ]
     - source: "//noinspection"
