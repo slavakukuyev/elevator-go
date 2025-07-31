@@ -1,0 +1,34 @@
+{
+    "name": "elevator-system",
+    "version": "1.0.0",
+    "description": "Elevator control system with Go backend and Svelte frontend",
+    "private": true,
+    "scripts": {
+        "dev": "make dev/client",
+        "dev:full": "make dev/full",
+        "dev:backend": "make dev/backend",
+        "dev:client": "make dev/client",
+        "build": "cd client && npm run build",
+        "build:client": "cd client && npm run build",
+        "test": "cd client && npm run test",
+        "test:client": "cd client && npm run test",
+        "lint": "cd client && npm run lint",
+        "lint:fix": "cd client && npm run lint:fix",
+        "format": "cd client && npm run format",
+        "install:client": "cd client && npm install",
+        "clean": "make clean"
+    },
+    "workspaces": [
+        "client",
+        "client_demo"
+    ],
+    "keywords": [
+        "elevator",
+        "control",
+        "system",
+        "go",
+        "svelte"
+    ],
+    "author": "",
+    "license": "ISC"
+}

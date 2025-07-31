@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # Go Backend Service
+  backend:
+    build:
+      context: .
+      dockerfile: build/package/Dockerfile
+    ports:
+      - "6660:6660"  # Main API
+      - "6661:6661"  # WebSocket server
+    environment:
+      # Environment configuration
+      ENV: development
+      LOG_LEVEL: DEBUG
+      PORT: 6660
+      
+      # Enable features
+      METRICS_ENABLED: "true"
+      WEBSOCKET_ENABLED: "true"
+      HEALTH_ENABLED: "true"
+      CORS_ENABLED: "true"
+      CORS_ALLOWED_ORIGINS: "*"
+      
+      # Elevator configuration
+      DEFAULT_MAX_FLOOR: 15
+      DEFAULT_MIN_FLOOR: 0
+      DEFAULT_ELEVATOR_COUNT: 0
+      ELEVATOR_NAME_PREFIX: "Dev-Elevator"
+      
+      # Performance settings
+      EACH_FLOOR_DURATION: 2s
+      OPEN_DOOR_DURATION: 3s
+      STATUS_UPDATE_INTERVAL: 1s
+      
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6660/v1/health/live"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - elevator-network
+
+  # Svelte Frontend Client
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"  # Svelte client on port 3000
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - elevator-network
+    environment:
+      - VITE_API_URL=http://localhost:6660/v1
+
+networks:
+  elevator-network:
+    driver: bridge 

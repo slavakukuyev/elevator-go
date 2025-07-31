@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elevator Control System - Docker Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .docker-info {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: white;
+            text-align: center;
+        }
+
+        .docker-info strong {
+            color: #ffd700;
+        }
+
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 10px 10px 0 0;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .tab-content {
+            background: white;
+            border-radius: 0 0 10px 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            min-height: 500px;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .response.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .response.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .status-container {
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .connection-status {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .endpoint-list {
+            list-style: none;
+        }
+
+        .endpoint-list li {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+
+        .method {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .api-info {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏗️ Elevator Control System</h1>
+            <p>Docker Demo - API v1.0 Test & Monitor Interface</p>
+        </div>
+
+        <div class="docker-info">
+            <strong>🐳 Docker Setup:</strong>
+            Web Client running on port 8080 |
+            Elevator Service running on port 6660 |
+            All requests proxied through nginx
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('api-info')">API Info</button>
+            <button class="tab" onclick="showTab('elevator-ops')">Elevator Operations</button>
+            <button class="tab" onclick="showTab('management')">Management</button>
+            <button class="tab" onclick="showTab('monitoring')">Monitoring</button>
+            <button class="tab" onclick="showTab('realtime')">Real-time Status</button>
+        </div>
+
+        <div class="tab-content">
+            <!-- API Info Tab -->
+            <div id="api-info" class="tab-panel active">
+                <h2>🔗 API Information</h2>
+                <div class="api-info">
+                    <strong>Base URL:</strong> http://localhost:8080 (nginx proxy)<br>
+                    <strong>Backend URL:</strong> http://elevator-service:6660<br>
+                    <strong>API Version:</strong> v1<br>
+                    <strong>Docker Network:</strong> elevator-network
+                </div>
+
+                <button class="btn" onclick="fetchAPIInfo()">Get API Info</button>
+                <div id="api-info-response" class="response" style="display: none;"></div>
+
+                <h3>📋 Available Endpoints</h3>
+                <ul class="endpoint-list">
+                    <li><span class="method">GET</span> /v1 - Get API information</li>
+                    <li><span class="method">POST</span> /v1/floors/request - Request elevator</li>
+                    <li><span class="method">POST</span> /v1/elevators - Create new elevator</li>
+                    <li><span class="method">GET</span> /v1/health - Health check</li>
+                    <li><span class="method">GET</span> /v1/metrics - System metrics</li>
+                    <li><span class="method">GET</span> /metrics - Prometheus metrics</li>
+                    <li><span class="method">WebSocket</span> /ws/status - Real-time updates</li>
+                </ul>
+            </div>
+
+            <!-- Elevator Operations Tab -->
+            <div id="elevator-ops" class="tab-panel">
+                <h2>🚀 Elevator Operations</h2>
+
+                <div class="form-group">
+                    <label>API Version:</label>
+                    <select id="ops-api-version">
+                        <option value="v1">v1 (New Standardized API)</option>
+                        <option value="legacy">Legacy (Backward Compatibility)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="from-floor">From Floor:</label>
+                    <input type="number" id="from-floor" placeholder="e.g., 1" value="1">
+                </div>
+
+                <div class="form-group">
+                    <label for="to-floor">To Floor:</label>
+                    <input type="number" id="to-floor" placeholder="e.g., 10" value="10">
+                </div>
+
+                <button class="btn" onclick="requestElevator()">🔼 Request Elevator</button>
+                <div id="elevator-request-response" class="response" style="display: none;"></div>
+            </div>
+
+            <!-- Management Tab -->
+            <div id="management" class="tab-panel">
+                <h2>⚙️ Elevator Management</h2>
+
+                <div class="form-group">
+                    <label>API Version:</label>
+                    <select id="mgmt-api-version">
+                        <option value="v1">v1 (New Standardized API)</option>
+                        <option value="legacy">Legacy (Backward Compatibility)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="elevator-name">Elevator Name:</label>
+                    <input type="text" id="elevator-name" placeholder="e.g., Elevator-Premium" value="Elevator-Docker">
+                </div>
+
+                <div class="form-group">
+                    <label for="min-floor">Minimum Floor:</label>
+                    <input type="number" id="min-floor" placeholder="e.g., -2" value="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="max-floor">Maximum Floor:</label>
+                    <input type="number" id="max-floor" placeholder="e.g., 25" value="15">
+                </div>
+
+                <button class="btn" onclick="createElevator()">➕ Create Elevator</button>
+                <div id="create-elevator-response" class="response" style="display: none;"></div>
+            </div>
+
+            <!-- Monitoring Tab -->
+            <div id="monitoring" class="tab-panel">
+                <h2>📊 System Monitoring</h2>
+
+                <div class="two-column">
+                    <div>
+                        <h3>Health Check</h3>
+                        <button class="btn" onclick="checkHealth()">🏥 Check Health</button>
+                        <div id="health-response" class="response" style="display: none;"></div>
+                    </div>
+
+                    <div>
+                        <h3>System Metrics</h3>
+                        <button class="btn" onclick="getMetrics()">📈 Get Metrics</button>
+                        <div id="metrics-response" class="response" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-time Status Tab -->
+            <div id="realtime" class="tab-panel">
+                <h2>📡 Real-time Status Updates</h2>
+
+                <div class="status-container">
+                    <div class="status-header">
+                        <h3>WebSocket Connection</h3>
+                        <span id="connection-status" class="connection-status disconnected">Disconnected</span>
+                    </div>
+                    <button class="btn" onclick="toggleWebSocket()" id="ws-toggle">Connect WebSocket</button>
+                </div>
+
+                <pre id="status"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // WebSocket management
+        let ws = null;
+        let wsConnected = false;
+
+        // Tab management
+        function showTab(tabName) {
+            // Hide all tab panels
+            const panels = document.querySelectorAll('.tab-panel');
+            panels.forEach(panel => panel.classList.remove('active'));
+
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+
+            // Show selected panel and mark tab as active
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // API request helper - updated for Docker setup
+        async function makeApiRequest(endpoint, method = 'GET', body = null) {
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Request-ID': 'docker-demo-' + Date.now()
+                    }
+                };
+
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+
+                // Use relative URLs since nginx will proxy to the backend
+                const response = await fetch(endpoint, options);
+                const data = await response.text();
+
+                return {
+                    status: response.status,
+                    data: data,
+                    isJson: response.headers.get('content-type')?.includes('application/json')
+                };
+            } catch (error) {
+                return {
+                    status: 0,
+                    data: 'Network error: ' + error.message,
+                    isJson: false
+                };
+            }
+        }
+
+        // Display response helper
+        function displayResponse(elementId, response) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+
+            let displayData = response.data;
+            if (response.isJson) {
+                try {
+                    displayData = JSON.stringify(JSON.parse(response.data), null, 2);
+                } catch (e) {
+                    // If JSON parsing fails, display as is
+                }
+            }
+
+            element.textContent = `Status: ${response.status}\n\n${displayData}`;
+            element.className = `response ${response.status >= 200 && response.status < 300 ? 'success' : 'error'}`;
+        }
+
+        // API Info
+        async function fetchAPIInfo() {
+            const response = await makeApiRequest('/v1');
+            displayResponse('api-info-response', response);
+        }
+
+        // Elevator Operations
+        async function requestElevator() {
+            const apiVersion = document.getElementById('ops-api-version').value;
+            const from = parseInt(document.getElementById('from-floor').value);
+            const to = parseInt(document.getElementById('to-floor').value);
+
+            const endpoint = apiVersion === 'v1' ? '/v1/floors/request' : '/floor';
+            const body = { from, to };
+
+            const response = await makeApiRequest(endpoint, 'POST', body);
+            displayResponse('elevator-request-response', response);
+        }
+
+        // Elevator Management
+        async function createElevator() {
+            const apiVersion = document.getElementById('mgmt-api-version').value;
+            const name = document.getElementById('elevator-name').value;
+            const minFloor = parseInt(document.getElementById('min-floor').value);
+            const maxFloor = parseInt(document.getElementById('max-floor').value);
+
+            const endpoint = apiVersion === 'v1' ? '/v1/elevators' : '/elevator';
+            const body = {
+                name,
+                min_floor: minFloor,
+                max_floor: maxFloor
+            };
+
+            const response = await makeApiRequest(endpoint, 'POST', body);
+            displayResponse('create-elevator-response', response);
+        }
+
+        // Monitoring
+        async function checkHealth() {
+            const response = await makeApiRequest('/v1/health');
+            displayResponse('health-response', response);
+        }
+
+        async function getMetrics() {
+            const response = await makeApiRequest('/v1/metrics');
+            displayResponse('metrics-response', response);
+        }
+
+        // WebSocket management - updated for Docker setup
+        function toggleWebSocket() {
+            if (wsConnected) {
+                disconnectWebSocket();
+            } else {
+                connectWebSocket();
+            }
+        }
+
+        function connectWebSocket() {
+            // Connect through nginx proxy
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws/status`;
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                wsConnected = true;
+                updateConnectionStatus(true);
+                console.log('WebSocket connection opened');
+            };
+
+            ws.onmessage = (event) => {
+                const status = JSON.parse(event.data);
+                document.getElementById('status').textContent = JSON.stringify(status, null, 2);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateConnectionStatus(false);
+            };
+
+            ws.onclose = () => {
+                wsConnected = false;
+                updateConnectionStatus(false);
+                console.log('WebSocket connection closed');
+            };
+        }
+
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            wsConnected = false;
+            updateConnectionStatus(false);
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connection-status');
+            const toggleButton = document.getElementById('ws-toggle');
+
+            if (connected) {
+                statusElement.textContent = 'Connected';
+                statusElement.className = 'connection-status connected';
+                toggleButton.textContent = 'Disconnect WebSocket';
+            } else {
+                statusElement.textContent = 'Disconnected';
+                statusElement.className = 'connection-status disconnected';
+                toggleButton.textContent = 'Connect WebSocket';
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            // Fetch API info on page load
+            fetchAPIInfo();
+
+            // Show Docker setup info
+            console.log('Docker Demo Mode: API requests will be proxied through nginx to elevator-service:6660');
+        });
+    </script>
+</body>
+
+</html>

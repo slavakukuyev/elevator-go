@@ -1,0 +1,637 @@
+openapi: 3.0.3
+info:
+  title: Elevator Control System API
+  description: |
+    A RESTful API for managing elevator systems in buildings. This API allows you to:
+    - Request elevators to move between floors
+    - Create new elevators in the system
+    - Monitor system health and metrics
+    - Get real-time status updates via WebSocket
+  version: "1.0.0"
+  contact:
+    name: Elevator System Support
+    email: support@elevator-system.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:6660
+    description: Local development server
+  - url: https://elevator-api.example.com
+    description: Production server
+
+security:
+  - {}  # No authentication required for this version
+
+paths:
+  /v1:
+    get:
+      summary: Get API information
+      description: Returns information about the API including available endpoints
+      operationId: getAPIInfo
+      tags:
+        - API Info
+      responses:
+        '200':
+          description: API information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIInfoResponse'
+              example:
+                success: true
+                data:
+                  name: "Elevator Control System API"
+                  version: "v1"
+                  description: "RESTful API for managing elevator systems"
+                  endpoints:
+                    "POST /v1/floors/request": "Request elevator from one floor to another"
+                    "POST /v1/elevators": "Create a new elevator in the system"
+                    "GET /v1/health": "Check system health status"
+                timestamp: "2024-01-15T10:30:00Z"
+                meta:
+                  request_id: "req_123456"
+                  version: "v1"
+                  duration: "2.5ms"
+
+  /v1/floors/request:
+    post:
+      summary: Request elevator
+      description: Request an elevator to move from one floor to another
+      operationId: requestElevator
+      tags:
+        - Elevator Operations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FloorRequestBody'
+            example:
+              from: 1
+              to: 10
+      responses:
+        '200':
+          description: Elevator request processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FloorRequestResponse'
+              example:
+                success: true
+                data:
+                  elevator_name: "Elevator-1"
+                  from_floor: 1
+                  to_floor: 10
+                  direction: "UP"
+                  message: "Floor request processed successfully"
+                timestamp: "2024-01-15T10:30:00Z"
+                meta:
+                  request_id: "req_123456"
+                  version: "v1"
+                  duration: "15.2ms"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v1/elevators:
+    post:
+      summary: Create elevator
+      description: Create a new elevator in the system with specified floor range
+      operationId: createElevator
+      tags:
+        - Elevator Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ElevatorRequestBody'
+            example:
+              name: "Elevator-Premium"
+              min_floor: -2
+              max_floor: 25
+      responses:
+        '201':
+          description: Elevator created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ElevatorCreateResponse'
+              example:
+                success: true
+                data:
+                  name: "Elevator-Premium"
+                  min_floor: -2
+                  max_floor: 25
+                  message: "Elevator created successfully"
+                timestamp: "2024-01-15T10:30:00Z"
+                meta:
+                  request_id: "req_123456"
+                  version: "v1"
+                  duration: "8.7ms"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v1/health:
+    get:
+      summary: Health check
+      description: Check the health status of the elevator system
+      operationId: getHealth
+      tags:
+        - System Monitoring
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                success: true
+                data:
+                  status: "healthy"
+                  timestamp: "2024-01-15T10:30:00Z"
+                  checks:
+                    system_healthy: true
+                    elevators_count: 3
+                    active_requests: 2
+                timestamp: "2024-01-15T10:30:00Z"
+                meta:
+                  request_id: "req_123456"
+                  version: "v1"
+                  duration: "1.2ms"
+        '503':
+          description: System is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v1/metrics:
+    get:
+      summary: Get system metrics
+      description: Retrieve system performance and usage metrics
+      operationId: getMetrics
+      tags:
+        - System Monitoring
+      responses:
+        '200':
+          description: Metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsResponse'
+              example:
+                success: true
+                data:
+                  timestamp: "2024-01-15T10:30:00Z"
+                  metrics:
+                    total_elevators: 3
+                    active_elevators: 2
+                    total_requests: 156
+                    average_response_time: 1.5
+                timestamp: "2024-01-15T10:30:00Z"
+                meta:
+                  request_id: "req_123456"
+                  version: "v1"
+                  duration: "3.1ms"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      description: Get Prometheus-formatted metrics for monitoring
+      operationId: getPrometheusMetrics
+      tags:
+        - System Monitoring
+      responses:
+        '200':
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                # HELP elevator_requests_total Total number of elevator requests
+                # TYPE elevator_requests_total counter
+                elevator_requests_total{elevator="Elevator-1"} 42
+
+  /ws/status:
+    get:
+      summary: WebSocket status updates
+      description: |
+        WebSocket endpoint for real-time elevator status updates.
+        Connect to receive periodic status updates about all elevators.
+      operationId: connectWebSocket
+      tags:
+        - Real-time Updates
+      responses:
+        '101':
+          description: WebSocket connection established
+        '400':
+          description: Bad WebSocket request
+
+components:
+  schemas:
+    # Request Schemas
+    FloorRequestBody:
+      type: object
+      required:
+        - from
+        - to
+      properties:
+        from:
+          type: integer
+          minimum: -100
+          maximum: 200
+          description: Origin floor number
+          example: 1
+        to:
+          type: integer
+          minimum: -100
+          maximum: 200
+          description: Destination floor number
+          example: 10
+      description: Request body for elevator floor requests
+
+    ElevatorRequestBody:
+      type: object
+      required:
+        - name
+        - min_floor
+        - max_floor
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Unique name for the elevator
+          example: "Elevator-Premium"
+        min_floor:
+          type: integer
+          minimum: -100
+          maximum: 200
+          description: Minimum floor the elevator can reach
+          example: -2
+        max_floor:
+          type: integer
+          minimum: -100
+          maximum: 200
+          description: Maximum floor the elevator can reach
+          example: 25
+      description: Request body for creating a new elevator
+
+    # Response Data Schemas
+    FloorRequestResponseData:
+      type: object
+      properties:
+        elevator_name:
+          type: string
+          description: Name of the assigned elevator
+          example: "Elevator-1"
+        from_floor:
+          type: integer
+          description: Origin floor number
+          example: 1
+        to_floor:
+          type: integer
+          description: Destination floor number
+          example: 10
+        direction:
+          type: string
+          enum: [UP, DOWN]
+          description: Direction of movement
+          example: "UP"
+        message:
+          type: string
+          description: Human-readable response message
+          example: "Floor request processed successfully"
+
+    ElevatorCreateResponseData:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the created elevator
+          example: "Elevator-Premium"
+        min_floor:
+          type: integer
+          description: Minimum floor of the elevator
+          example: -2
+        max_floor:
+          type: integer
+          description: Maximum floor of the elevator
+          example: 25
+        message:
+          type: string
+          description: Human-readable response message
+          example: "Elevator created successfully"
+
+    HealthResponseData:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          description: Overall system health status
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+          description: Time when health check was performed
+          example: "2024-01-15T10:30:00Z"
+        checks:
+          type: object
+          description: Detailed health check results
+          additionalProperties: true
+          example:
+            system_healthy: true
+            elevators_count: 3
+            active_requests: 2
+
+    MetricsResponseData:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Time when metrics were collected
+          example: "2024-01-15T10:30:00Z"
+        metrics:
+          type: object
+          description: System metrics data
+          additionalProperties: true
+          example:
+            total_elevators: 3
+            active_elevators: 2
+            total_requests: 156
+            average_response_time: 1.5
+
+    APIInfoResponseData:
+      type: object
+      properties:
+        name:
+          type: string
+          description: API name
+          example: "Elevator Control System API"
+        version:
+          type: string
+          description: API version
+          example: "v1"
+        description:
+          type: string
+          description: API description
+          example: "RESTful API for managing elevator systems"
+        endpoints:
+          type: object
+          description: Available API endpoints
+          additionalProperties:
+            type: string
+          example:
+            "POST /v1/floors/request": "Request elevator from one floor to another"
+            "POST /v1/elevators": "Create a new elevator in the system"
+
+    # Standard API Response Wrappers
+    APIResponse:
+      type: object
+      required:
+        - success
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+          example: true
+        data:
+          description: Response data (present on success)
+        error:
+          $ref: '#/components/schemas/APIError'
+        meta:
+          $ref: '#/components/schemas/APIMeta'
+        timestamp:
+          type: string
+          format: date-time
+          description: Response timestamp
+          example: "2024-01-15T10:30:00Z"
+
+    APIError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid input provided"
+        details:
+          type: string
+          description: Detailed error description
+          example: "Floor number must be between -100 and 200"
+        request_id:
+          type: string
+          description: Request identifier for tracking
+          example: "req_123456"
+        user_message:
+          type: string
+          description: User-friendly error message
+          example: "Please check your input and try again."
+
+    APIMeta:
+      type: object
+      properties:
+        request_id:
+          type: string
+          description: Unique request identifier
+          example: "req_123456"
+        version:
+          type: string
+          description: API version used
+          example: "v1"
+        duration:
+          type: string
+          description: Request processing duration
+          example: "15.2ms"
+
+    # Typed Response Schemas
+    FloorRequestResponse:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/FloorRequestResponseData'
+
+    ElevatorCreateResponse:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ElevatorCreateResponseData'
+
+    HealthResponse:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/HealthResponseData'
+
+    MetricsResponse:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/MetricsResponseData'
+
+    APIInfoResponse:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/APIInfoResponseData'
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/APIResponse'
+              - type: object
+                properties:
+                  success:
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "VALIDATION_ERROR"
+                      message:
+                        example: "Invalid input provided"
+                      details:
+                        example: "Floor number must be between -100 and 200"
+                      user_message:
+                        example: "Please check your input and try again."
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/APIResponse'
+              - type: object
+                properties:
+                  success:
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "NOT_FOUND"
+                      message:
+                        example: "Resource not found"
+                      user_message:
+                        example: "The requested resource was not found."
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/APIResponse'
+              - type: object
+                properties:
+                  success:
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "CONFLICT"
+                      message:
+                        example: "Resource conflict"
+                      user_message:
+                        example: "The requested operation conflicts with existing data."
+
+    TooManyRequests:
+      description: Too many requests - rate limit exceeded
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/APIResponse'
+              - type: object
+                properties:
+                  success:
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "RATE_LIMITED"
+                      message:
+                        example: "Rate limit exceeded"
+                      user_message:
+                        example: "Too many requests. Please slow down."
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/APIResponse'
+              - type: object
+                properties:
+                  success:
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "INTERNAL_ERROR"
+                      message:
+                        example: "Internal server error"
+                      user_message:
+                        example: "Something went wrong on our end. Please try again later."
+
+tags:
+  - name: API Info
+    description: General API information
+  - name: Elevator Operations
+    description: Core elevator request operations
+  - name: Elevator Management
+    description: Elevator creation and management
+  - name: System Monitoring
+    description: Health checks and metrics
+  - name: Real-time Updates
+    description: WebSocket connections for live updates
+
+externalDocs:
+  description: Find more information in the project README
+  url: https://github.com/slavakukuyev/elevator-go/blob/main/README.md 

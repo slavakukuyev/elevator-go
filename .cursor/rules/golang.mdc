@@ -1,0 +1,6 @@
+---
+description: 
+globs: *.go,*.md,*.mod
+alwaysApply: false
+---
+Must use [golang_rules.md](mdc:docs/golang_rules.md)

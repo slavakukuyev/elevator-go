@@ -1,90 +1,251 @@
 package manager
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
-	"math/rand"
 	"sync"
 	"time"
 
+	"github.com/slavakukuyev/elevator-go/internal/constants"
+	"github.com/slavakukuyev/elevator-go/internal/domain"
 	"github.com/slavakukuyev/elevator-go/internal/elevator"
 	"github.com/slavakukuyev/elevator-go/internal/factory"
 	"github.com/slavakukuyev/elevator-go/internal/infra/config"
+	"github.com/slavakukuyev/elevator-go/metrics"
 )
 
-const _directionUp = "up"
-const _directionDown = "down"
-
-type T struct {
+type Manager struct {
 	mu        sync.RWMutex
-	elevators []*elevator.T
+	elevators []*elevator.Elevator
 	factory   factory.ElevatorFactory
+	logger    *slog.Logger
+	ctx       context.Context
+	cancel    context.CancelFunc
+	cfg       *config.Config
 }
 
-func New(cfg *config.Config, factory factory.ElevatorFactory) *T {
-	return &T{
-		elevators: []*elevator.T{},
+func New(cfg *config.Config, factory factory.ElevatorFactory) *Manager {
+	ctx, cancel := context.WithCancel(context.Background())
+	return &Manager{
+		elevators: make([]*elevator.Elevator, 0),
 		factory:   factory,
+		logger:    slog.With(slog.String("component", constants.ComponentManager)),
+		ctx:       ctx,
+		cancel:    cancel,
+		cfg:       cfg,
 	}
 }
 
-func (m *T) AddElevator(cfg *config.Config, name string,
+func (m *Manager) AddElevator(ctx context.Context, cfg *config.Config, name string,
 	minFloor, maxFloor int,
-	eachFloorDuration, openDoorDuration time.Duration) error {
-	elevator, err := m.factory.CreateElevator(cfg, name,
-		minFloor, maxFloor,
-		eachFloorDuration, openDoorDuration)
-	if err != nil {
-		return fmt.Errorf("error on initialization new elevator: %w", err)
+	eachFloorDuration, openDoorDuration time.Duration, overloadThreshold int) error {
+
+	// Create a timeout context for elevator creation using configuration
+	createCtx, cancel := context.WithTimeout(ctx, m.cfg.CreateElevatorTimeout)
+	defer cancel()
+
+	// Check if elevator with the same name already exists - optimized lock scope
+	if m.elevatorExists(name) {
+		err := domain.NewValidationError("elevator with this name already exists", nil).
+			WithContext("name", name)
+		m.logger.ErrorContext(createCtx, "failed to add elevator",
+			slog.String("name", name),
+			slog.String("error", err.Error()))
+		return err
 	}
 
+	e, err := m.factory.CreateElevator(cfg, name,
+		minFloor, maxFloor,
+		eachFloorDuration, openDoorDuration, overloadThreshold)
+	if err != nil {
+		m.logger.ErrorContext(createCtx, "failed to initialize new elevator",
+			slog.String("name", name),
+			slog.Int("minFloor", minFloor),
+			slog.Int("maxFloor", maxFloor),
+			slog.String("error", err.Error()))
+
+		// Preserve validation errors, wrap others as internal errors
+		if domainErr, ok := err.(*domain.DomainError); ok && domainErr.Type == domain.ErrTypeValidation {
+			return err
+		}
+
+		return domain.NewInternalError("failed to initialize new elevator", err).
+			WithContext("name", name).
+			WithContext("minFloor", minFloor).
+			WithContext("maxFloor", maxFloor)
+	}
+
+	// Add to the collection with minimal lock time
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.elevators = append(m.elevators, elevator)
-	slog.Info("new elevator added to the managment pool",
-		slog.String("elevator", elevator.Name()),
-		slog.Int("minFllor", elevator.MinFloor()),
-		slog.Int("maxFloor", elevator.MaxFloor()),
+	m.elevators = append(m.elevators, e)
+	m.mu.Unlock()
+
+	m.logger.InfoContext(createCtx, "new elevator added to the management pool",
+		slog.String("elevator", e.Name()),
+		slog.Int("minFloor", e.MinFloor().Value()),
+		slog.Int("maxFloor", e.MaxFloor().Value()),
 	)
 	return nil
 }
 
-func (m *T) RequestElevator(fromFloor, toFloor int) (*elevator.T, error) {
+// elevatorExists checks if an elevator with the given name already exists
+func (m *Manager) elevatorExists(name string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for _, e := range m.elevators {
+		if e.Name() == name {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *Manager) GetElevator(name string) *elevator.Elevator {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for _, e := range m.elevators {
+		if e.Name() == name {
+			return e
+		}
+	}
+	return nil
+}
+
+func (m *Manager) GetElevators() []*elevator.Elevator {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	elevators := make([]*elevator.Elevator, len(m.elevators))
+	copy(elevators, m.elevators)
+	return elevators
+}
+
+func (m *Manager) RequestElevator(ctx context.Context, fromFloor, toFloor int) (*elevator.Elevator, error) {
+	start := time.Now()
+
+	// Create a timeout context for elevator request processing using configuration
+	requestCtx, cancel := context.WithTimeout(ctx, m.cfg.RequestTimeout)
+	defer cancel()
 
 	if toFloor == fromFloor {
-		return nil, fmt.Errorf("the requested floor (%d) should be different from your floor (%d)", toFloor, fromFloor)
-	}
+		err := domain.NewValidationError("requested floor must be different from current floor", nil).
+			WithContext("fromFloor", fromFloor).
+			WithContext("toFloor", toFloor)
+		m.logger.ErrorContext(requestCtx, "invalid floor request",
+			slog.Int("fromFloor", fromFloor),
+			slog.Int("toFloor", toFloor),
+			slog.String("error", err.Error()))
 
-	direction := _directionUp
-	if toFloor < fromFloor {
-		direction = _directionDown
-	}
-
-	m.mu.RLock()
-	elevators := m.elevators
-	m.mu.RUnlock()
-
-	var elevator *elevator.T
-
-	// validate existing requests
-	if elevator = requestedElevator(elevators, direction, fromFloor, toFloor); elevator != nil {
-		return elevator, nil
-	}
-
-	elevator, err := m.chooseElevator(elevators, direction, fromFloor, toFloor)
-	if err != nil {
+		// Record validation error
+		metrics.IncError("validation_error", "manager")
 		return nil, err
 	}
 
-	elevator.Request(direction, fromFloor, toFloor)
-	slog.Info("request has been approved", slog.String("elevator", elevator.Name()), slog.Int("fromFloor", fromFloor), slog.Int("toFloor", toFloor))
-	return elevator, nil
+	direction := domain.DirectionUp
+	if toFloor < fromFloor {
+		direction = domain.DirectionDown
+	}
 
+	fromFloorDomain := domain.NewFloor(fromFloor)
+	toFloorDomain := domain.NewFloor(toFloor)
+
+	// Get a snapshot of elevators to reduce lock time
+	elevators := m.GetElevators()
+
+	if len(elevators) == 0 {
+		err := domain.NewInternalError("no elevators created yet", nil)
+		m.logger.ErrorContext(requestCtx, "no elevators available",
+			slog.Int("fromFloor", fromFloor),
+			slog.Int("toFloor", toFloor),
+			slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	var el *elevator.Elevator
+
+	if len(elevators) == 1 {
+		el = elevators[0]
+		if !el.IsRequestInRange(fromFloorDomain, toFloorDomain) {
+			return nil, domain.NewValidationError("requested floors out of range for the elevator", nil).
+				WithContext("fromFloor", fromFloor).
+				WithContext("toFloor", toFloor)
+		}
+	}
+
+	if el == nil {
+		// validate existing requests
+		if el = requestedElevator(elevators, direction, fromFloorDomain, toFloorDomain); el != nil {
+			m.logger.InfoContext(requestCtx, "found existing elevator request",
+				slog.String("elevator", el.Name()),
+				slog.Int("fromFloor", fromFloor),
+				slog.Int("toFloor", toFloor))
+
+			// Record existing request metrics
+			duration := time.Since(start)
+			metrics.RecordRequestDuration(el.Name(), "existing", duration.Seconds())
+			return el, nil
+		}
+	}
+
+	if el == nil {
+		var err error
+		el, err = m.chooseElevatorWithTimeout(requestCtx, elevators, direction, fromFloorDomain, toFloorDomain)
+		if err != nil {
+			m.logger.ErrorContext(requestCtx, "failed to choose elevator",
+				slog.Int("fromFloor", fromFloor),
+				slog.Int("toFloor", toFloor),
+				slog.String("error", err.Error()))
+
+			// Record elevator selection failure
+			metrics.IncError("elevator_selection_failed", "manager")
+			return nil, domain.NewNotFoundError("no suitable elevator found", err).
+				WithContext("fromFloor", fromFloor).
+				WithContext("toFloor", toFloor)
+		}
+	}
+
+	// Safety check: ensure elevator is not nil
+	if el == nil {
+		err := domain.NewInternalError("elevator selection returned nil without error", nil)
+		m.logger.ErrorContext(requestCtx, "internal error: nil elevator returned",
+			slog.Int("fromFloor", fromFloor),
+			slog.Int("toFloor", toFloor))
+
+		metrics.IncError("nil_elevator_selection", "manager")
+		return nil, err
+	}
+
+	el.Request(direction, fromFloorDomain, toFloorDomain)
+
+	// Record successful request metrics
+	duration := time.Since(start)
+	directionStr := string(direction)
+
+	metrics.RecordRequestDuration(el.Name(), "success", duration.Seconds())
+	metrics.IncRequestsTotal(el.Name(), directionStr, "success")
+
+	// Calculate estimated wait time (simplified estimation)
+	currentFloor := el.CurrentFloor().Value()
+	waitTimeEstimate := float64(abs(fromFloor-currentFloor)) * 2.0 // 2 seconds per floor estimate
+	metrics.RecordWaitTime(el.Name(), waitTimeEstimate)
+
+	// Calculate travel time estimate
+	travelDistance := abs(toFloor - fromFloor)
+	travelTimeEstimate := float64(travelDistance) * 2.0 // 2 seconds per floor
+	metrics.RecordTravelTime(el.Name(), fmt.Sprintf("%d", travelDistance), travelTimeEstimate)
+
+	m.logger.InfoContext(requestCtx, "request has been approved",
+		slog.String("elevator", el.Name()),
+		slog.Int("fromFloor", fromFloor),
+		slog.Int("toFloor", toFloor),
+		slog.Float64("processing_time_seconds", duration.Seconds()),
+		slog.Float64("estimated_wait_time", waitTimeEstimate))
+	return el, nil
 }
 
-func requestedElevator(elevators []*elevator.T, direction string, fromFloor, toFloor int) *elevator.T {
+func requestedElevator(elevators []*elevator.Elevator, direction domain.Direction, fromFloor, toFloor domain.Floor) *elevator.Elevator {
 	for _, e := range elevators {
-		if e.Directions().IsExisting(direction, fromFloor, toFloor) {
+		if e.Directions().IsRequestExisting(direction, fromFloor, toFloor) {
 			return e
 		}
 	}
@@ -92,18 +253,44 @@ func requestedElevator(elevators []*elevator.T, direction string, fromFloor, toF
 	return nil
 }
 
-func (m *T) chooseElevator(elevators []*elevator.T, requestedDirection string, fromFloor, toFloor int) (*elevator.T, error) {
-	elevatorsWaiting := make(map[*elevator.T]int)
-	elevatorsByDirection := make(map[*elevator.T]string)
+// chooseElevatorWithTimeout wraps chooseElevator with timeout support
+func (m *Manager) chooseElevatorWithTimeout(ctx context.Context, elevators []*elevator.Elevator, requestedDirection domain.Direction, fromFloor, toFloor domain.Floor) (*elevator.Elevator, error) {
+	type result struct {
+		elevator *elevator.Elevator
+		err      error
+	}
 
-	//case when elevator is waiting to start
+	resultCh := make(chan result, 1)
+
+	go func() {
+		e, err := m.chooseElevator(elevators, requestedDirection, fromFloor, toFloor)
+		resultCh <- result{elevator: e, err: err}
+	}()
+
+	select {
+	case <-ctx.Done():
+		m.logger.Error("elevator selection timed out!!!",
+			slog.String("error", ctx.Err().Error()),
+			slog.Int("fromFloor", fromFloor.Value()),
+			slog.Int("toFloor", toFloor.Value()))
+		return nil, domain.NewInternalError("elevator selection timed out", ctx.Err())
+	case res := <-resultCh:
+		return res.elevator, res.err
+	}
+}
+
+func (m *Manager) chooseElevator(elevators []*elevator.Elevator, requestedDirection domain.Direction, fromFloor, toFloor domain.Floor) (*elevator.Elevator, error) {
+	elevatorsWaiting := make(map[*elevator.Elevator]domain.Floor)
+	elevatorsByDirection := make(map[*elevator.Elevator]domain.Direction)
+
+	// case when elevator is waiting to start
 	for _, e := range elevators {
 		if !e.IsRequestInRange(fromFloor, toFloor) {
 			continue
 		}
 
 		d := e.CurrentDirection()
-		if d == "" {
+		if d == domain.DirectionIdle {
 			elevatorsWaiting[e] = e.CurrentFloor()
 		} else {
 			elevatorsByDirection[e] = d
@@ -112,52 +299,70 @@ func (m *T) chooseElevator(elevators []*elevator.T, requestedDirection string, f
 
 	if len(elevatorsWaiting) > 0 {
 		if e := findNearestElevator(elevatorsWaiting, fromFloor); e != nil {
+			m.logger.Debug("found nearest elevator in waiting state!!!",
+				slog.String("elevator", e.Name()),
+				slog.Int("fromFloor", fromFloor.Value()),
+				slog.Int("toFloor", toFloor.Value()))
 			return e, nil
 		}
 	}
 
 	if len(elevatorsByDirection) == 0 {
-		return nil, fmt.Errorf("the requested floors (%d, %d) should be in range of existing elevators", fromFloor, toFloor)
+		m.logger.Debug("no elevators in the same direction!!!",
+			slog.Int("fromFloor", fromFloor.Value()),
+			slog.Int("toFloor", toFloor.Value()))
+		return nil, domain.NewValidationError("requested floors out of range for all elevators", nil).
+			WithContext("fromFloor", fromFloor.Value()).
+			WithContext("toFloor", toFloor.Value())
 	}
 
 	/******** SAME DIRECTION ********/
 
 	filteredElevators := elevatorsMatchingDirections(elevatorsByDirection, requestedDirection)
 
-	//case when single elevator with the same direction
-	//should validate if the elevator still on his way to the floor
+	// case when single elevator with the same direction
+	// should validate if the elevator still on his way to the floor and not overloaded
 	if len(filteredElevators) == 1 {
 		e := filteredElevators[0]
 		currentFloor := e.CurrentFloor()
 
-		if (requestedDirection == _directionUp && currentFloor < fromFloor) ||
-			(requestedDirection == _directionDown && currentFloor > fromFloor) {
+		if ((requestedDirection == domain.DirectionUp && (currentFloor.IsBelow(fromFloor) || currentFloor.IsEqual(fromFloor))) ||
+			(requestedDirection == domain.DirectionDown && (currentFloor.IsAbove(fromFloor) || currentFloor.IsEqual(fromFloor)))) &&
+			!isElevatorOverloaded(e) {
 			return e, nil
 		}
+		// If single elevator doesn't meet criteria, continue to opposite direction check
 	}
 
-	//case when more then one elevator with the same direction
-	// should check smallest number between currentfloor and requested floor
+	// case when more than one elevator with the same direction
+	// should check the smallest number between current floor and requested floor, avoiding overloaded elevators
 	if len(filteredElevators) > 1 {
-		var first bool = true
+		var first = true
 		var smallest int
-		var nearestE *elevator.T
+		var nearestE *elevator.Elevator
 
 		for _, e := range filteredElevators {
+			// Skip overloaded elevators
+			if isElevatorOverloaded(e) {
+				continue
+			}
+
 			currentFloor := e.CurrentFloor()
 
-			if requestedDirection == _directionUp && currentFloor < fromFloor {
-				diff := fromFloor - currentFloor
+			if requestedDirection == domain.DirectionUp && (currentFloor.IsBelow(fromFloor) || currentFloor.IsEqual(fromFloor)) {
+				diff := fromFloor.Distance(currentFloor)
 				if first || (smallest > diff) {
-					nearestE = e
 					smallest = diff
+					nearestE = e
 					first = false
 				}
-			} else if requestedDirection == _directionDown && currentFloor > fromFloor {
-				diff := currentFloor - fromFloor
+			}
+
+			if requestedDirection == domain.DirectionDown && (currentFloor.IsAbove(fromFloor) || currentFloor.IsEqual(fromFloor)) {
+				diff := currentFloor.Distance(fromFloor)
 				if first || (smallest > diff) {
-					nearestE = e
 					smallest = diff
+					nearestE = e
 					first = false
 				}
 			}
@@ -166,150 +371,332 @@ func (m *T) chooseElevator(elevators []*elevator.T, requestedDirection string, f
 		if nearestE != nil {
 			return nearestE, nil
 		}
-
-		//all the elevators in the same direction already passed the requested floor
-		//find the one with less requests in both directions for now
-		e := elevatorWithMinRequestsByDirection(elevators, "")
-		if e != nil {
-			return e, nil
-		}
-
+		// If no suitable elevator in same direction, continue to opposite direction check
 	}
+
 	/******** OPPOSITE DIRECTION ********/
 
 	filteredElevators = elevatorsOppositeDirections(elevatorsByDirection, requestedDirection)
 
-	//if only one found, then the previous conditions didn't work
-	//then return this single filtered elevator, because:
-	// * the other elevators already passed the floors
-	// * this one will finish its opposite direction first and then will switch to required one
-	filteredElevatorsLength := len(filteredElevators)
-	if filteredElevatorsLength == 1 {
-		return filteredElevators[0], nil
+	if len(filteredElevators) == 1 {
+		e := filteredElevators[0]
+		// Only accept opposite direction elevator if not overloaded
+		if !isElevatorOverloaded(e) {
+			return e, nil
+		}
+		// If single opposite direction elevator is overloaded, continue to multi-elevator check
 	}
 
-	if filteredElevatorsLength > 1 {
-		var e *elevator.T
-		if requestedDirection == _directionUp {
-			e = elevatorWithMinRequestsByDirection(elevators, _directionDown)
-		} else if requestedDirection == _directionDown {
-			e = elevatorWithMinRequestsByDirection(elevators, _directionUp)
-		}
-
+	if len(filteredElevators) > 1 {
+		e := elevatorWithMinRequestsByDirection(filteredElevators, requestedDirection)
 		if e != nil {
 			return e, nil
 		}
+		// If all elevators in opposite direction are overloaded, fall through to error
 	}
 
-	//default response will not stuck elevators -> at least one will work
-	for e := range elevatorsByDirection {
-		return e, nil
-	}
-
-	return nil, fmt.Errorf("no elevator found for reqeusted floors: fromFloor(%d) toFloor(%d) [WTF: One more case]", fromFloor, toFloor)
+	return nil, domain.NewValidationError("no elevators available for this request", nil).
+		WithContext("direction", string(requestedDirection)).
+		WithContext("fromFloor", fromFloor.Value()).
+		WithContext("toFloor", toFloor.Value())
 }
 
-func elevatorsMatchingDirections(elevatorsByDirection map[*elevator.T]string, requestedDirection string) []*elevator.T {
-	elevators := make([]*elevator.T, 0, len(elevatorsByDirection))
-	for e, sourceDirection := range elevatorsByDirection {
-		if sourceDirection == requestedDirection {
-			elevators = append(elevators, e)
+// isElevatorOverloaded checks if an elevator has too many requests to serve efficiently
+// Uses the elevator's configured overload threshold (defaults to 12 if not specified)
+func isElevatorOverloaded(e *elevator.Elevator) bool {
+	directions := e.Directions()
+	totalRequests := directions.DirectionsLength()
+	return totalRequests > e.OverloadThreshold()
+}
+
+func elevatorsMatchingDirections(elevatorsByDirection map[*elevator.Elevator]domain.Direction, requestedDirection domain.Direction) []*elevator.Elevator {
+	filteredElevators := make([]*elevator.Elevator, 0)
+	for e, d := range elevatorsByDirection {
+		if d == requestedDirection {
+			filteredElevators = append(filteredElevators, e)
 		}
 	}
-	return elevators
+	return filteredElevators
 }
 
-func elevatorsOppositeDirections(elevatorsByDirection map[*elevator.T]string, requestedDirection string) []*elevator.T {
-	elevators := make([]*elevator.T, 0, len(elevatorsByDirection))
-	for e, sourceDirection := range elevatorsByDirection {
-		if sourceDirection != requestedDirection {
-			elevators = append(elevators, e)
+func elevatorsOppositeDirections(elevatorsByDirection map[*elevator.Elevator]domain.Direction, requestedDirection domain.Direction) []*elevator.Elevator {
+	filteredElevators := make([]*elevator.Elevator, 0)
+	for e, d := range elevatorsByDirection {
+		if d != requestedDirection {
+			filteredElevators = append(filteredElevators, e)
 		}
 	}
-	return elevators
+	return filteredElevators
 }
 
-func floorsDiff(floor, requestedFloor int) int {
-	if floor < requestedFloor {
-		return requestedFloor - floor
-	}
-
-	if floor > requestedFloor {
-		return floor - requestedFloor
-	}
-
-	return 0
+func floorsDiff(floor, requestedFloor domain.Floor) int {
+	return floor.Distance(requestedFloor)
 }
 
-func findNearestElevator(elevatorsWaiting map[*elevator.T]int, requestedFloor int) *elevator.T {
-	elevatorsLength := len(elevatorsWaiting)
-	if elevatorsLength == 0 {
-		return nil
-	}
-
-	if elevatorsLength == 1 {
-		for elevator := range elevatorsWaiting {
-			return elevator
-		}
-	}
-	var minDistanceElevators []*elevator.T
-	minDistance := -1
-
-	for el, floor := range elevatorsWaiting {
-		distance := floorsDiff(floor, requestedFloor)
-
-		// If it's the first key or has the same minimum distance, add it to the list.
-		if minDistance == -1 || distance == minDistance {
-			minDistanceElevators = append(minDistanceElevators, el)
-			minDistance = distance
-		} else if distance < minDistance {
-			// If it's closer than the previous ones, reset the list.
-			minDistanceElevators = []*elevator.T{el}
-			minDistance = distance
-		}
-	}
-
-	// Randomly choose one of the keys with the same minimum distance.
-	if len(minDistanceElevators) > 0 {
-		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		randomIndex := r.Intn(len(minDistanceElevators))
-		return minDistanceElevators[randomIndex]
-	}
-
-	return nil
-}
-
-// elevatorWithMinRequestsByDirection selects an elevator with the minimum number of pending requests
-// in the specified direction from the given slice of elevators.
-// If the direction is empty, it selects the elevator with the overall minimum number of requests.
-// Parameters:
-// - elevators: A slice of elevators to choose from.
-// - direction: The requested direction ("up", "down", or empty for any direction).
-// Returns:
-// - An Elevator pointer representing the selected elevator.
-func elevatorWithMinRequestsByDirection(elevators []*elevator.T, direction string) *elevator.T {
-	var elevator *elevator.T
+func findNearestElevator(elevatorsWaiting map[*elevator.Elevator]domain.Floor, requestedFloor domain.Floor) *elevator.Elevator {
+	var first = true
 	var smallest int
-	var first bool = true
+	var nearestE *elevator.Elevator
+
+	for e, floor := range elevatorsWaiting {
+		// Skip overloaded elevators
+		if isElevatorOverloaded(e) {
+			continue
+		}
+
+		diff := floorsDiff(floor, requestedFloor)
+		if first || (smallest > diff) {
+			smallest = diff
+			nearestE = e
+			first = false
+		}
+	}
+
+	return nearestE
+}
+
+func elevatorWithMinRequestsByDirection(elevators []*elevator.Elevator, direction domain.Direction) *elevator.Elevator {
+	var el *elevator.Elevator
+	var smallest int
+	var first = true
 
 	for _, e := range elevators {
+		// Skip overloaded elevators
+		if isElevatorOverloaded(e) {
+			continue
+		}
+
 		directions := e.Directions()
 		l := 0
 		switch direction {
-		case _directionUp:
+		case domain.DirectionUp:
 			l = directions.UpDirectionLength()
-		case _directionDown:
+		case domain.DirectionDown:
 			l = directions.DownDirectionLength()
 		default:
 			l = directions.UpDirectionLength() + directions.DownDirectionLength()
 		}
 
-		if first || (smallest < l) {
+		if first || (smallest > l) {
 			smallest = l
-			elevator = e
+			el = e
 			first = false
 		}
 	}
 
-	return elevator
+	return el
+}
+
+func (m *Manager) GetStatus() (map[string]interface{}, error) {
+	// Use a timeout for status collection to prevent hanging
+	ctx, cancel := context.WithTimeout(m.ctx, m.cfg.HealthCheckTimeout)
+	defer cancel()
+
+	type statusResult struct {
+		status map[string]interface{}
+		err    error
+	}
+
+	resultCh := make(chan statusResult, 1)
+
+	go func() {
+		m.mu.RLock()
+		status := make(map[string]interface{}, len(m.elevators))
+		for _, e := range m.elevators {
+			status[e.Name()] = e.GetStatus()
+		}
+		m.mu.RUnlock()
+		resultCh <- statusResult{status: status, err: nil}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil, domain.NewInternalError("status collection timed out", ctx.Err())
+	case result := <-resultCh:
+		return result.status, result.err
+	}
+}
+
+// GetHealthStatus returns health status for all elevators including circuit breaker metrics
+func (m *Manager) GetHealthStatus() (map[string]interface{}, error) {
+	// Use a timeout for health status collection
+	ctx, cancel := context.WithTimeout(m.ctx, m.cfg.HealthCheckTimeout)
+	defer cancel()
+
+	type healthResult struct {
+		health map[string]interface{}
+		err    error
+	}
+
+	resultCh := make(chan healthResult, 1)
+
+	go func() {
+		m.mu.RLock()
+		health := make(map[string]interface{})
+
+		elevatorHealth := make(map[string]interface{}, len(m.elevators))
+		totalElevators := len(m.elevators)
+		healthyElevators := 0
+		activeRequests := 0
+
+		for _, e := range m.elevators {
+			metrics := e.GetHealthMetrics()
+			elevatorHealth[e.Name()] = metrics
+
+			if isHealthy, ok := metrics["is_healthy"].(bool); ok && isHealthy {
+				healthyElevators++
+			}
+
+			// Count active requests (pending requests) for OpenAPI compliance
+			if pendingRequests, ok := metrics["pending_requests"].(int); ok {
+				activeRequests += pendingRequests
+			}
+		}
+
+		health["elevators"] = elevatorHealth
+		health["total_elevators"] = totalElevators
+		health["elevators_count"] = totalElevators // OpenAPI spec compatibility
+		health["healthy_elevators"] = healthyElevators
+		health["active_requests"] = activeRequests // OpenAPI spec field
+		// System is healthy if there are no elevators (initial state) or if at least one elevator is working
+		health["system_healthy"] = totalElevators == 0 || healthyElevators > 0
+		health["timestamp"] = time.Now().Format(time.RFC3339) // OpenAPI spec expects date-time format
+
+		m.mu.RUnlock()
+		resultCh <- healthResult{health: health, err: nil}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil, domain.NewInternalError("health status collection timed out", ctx.Err())
+	case result := <-resultCh:
+		return result.health, result.err
+	}
+}
+
+// GetMetrics returns operational metrics for monitoring
+func (m *Manager) GetMetrics() map[string]interface{} {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	totalRequests := 0
+	totalUpRequests := 0
+	totalDownRequests := 0
+	healthyElevators := 0
+	totalSuccessfulRequests := 0
+	totalFailedRequests := 0
+
+	for _, e := range m.elevators {
+		directions := e.Directions()
+		upRequests := directions.UpDirectionLength()
+		downRequests := directions.DownDirectionLength()
+
+		totalUpRequests += upRequests
+		totalDownRequests += downRequests
+
+		// Update Prometheus metrics for each elevator
+		metrics.SetCurrentFloor(e.Name(), float64(e.CurrentFloor().Value()))
+		metrics.SetPendingRequests(e.Name(), "up", float64(upRequests))
+		metrics.SetPendingRequests(e.Name(), "down", float64(downRequests))
+
+		// Check elevator health
+		healthMetrics := e.GetHealthMetrics()
+		if isHealthy, ok := healthMetrics["is_healthy"].(bool); ok && isHealthy {
+			healthyElevators++
+		}
+
+		// Update circuit breaker metrics
+		if cbState, ok := healthMetrics["circuit_breaker_state"].(string); ok {
+			stateValue := 0.0 // closed
+			if cbState == "half-open" {
+				stateValue = 1.0
+			} else if cbState == "open" {
+				stateValue = 2.0
+			}
+			metrics.SetCircuitBreakerState(e.Name(), stateValue)
+		}
+	}
+	totalRequests = totalUpRequests + totalDownRequests
+
+	// Calculate efficiency metrics
+	if totalRequests > 0 {
+		efficiency := float64(totalSuccessfulRequests) / float64(totalRequests+totalSuccessfulRequests+totalFailedRequests)
+		for _, e := range m.elevators {
+			metrics.SetElevatorEfficiency(e.Name(), efficiency)
+		}
+	}
+
+	// Update system health metrics
+	// System is healthy if there are no elevators (initial state) or if at least one elevator is working
+	systemHealthy := len(m.elevators) == 0 || healthyElevators > 0
+	metrics.SetSystemHealth("elevators", systemHealthy)
+	metrics.SetSystemHealth("manager", true) // Manager is healthy if it's responding
+
+	avgLoad := float64(totalRequests) / float64(max(len(m.elevators), 1))
+
+	return map[string]interface{}{
+		"total_elevators":     len(m.elevators),
+		"healthy_elevators":   healthyElevators,
+		"total_requests":      totalRequests,
+		"total_up_requests":   totalUpRequests,
+		"total_down_requests": totalDownRequests,
+		"average_load":        avgLoad,
+		"system_efficiency":   float64(totalSuccessfulRequests) / float64(max(totalRequests+totalSuccessfulRequests+totalFailedRequests, 1)),
+		"performance_score":   m.calculatePerformanceScore(avgLoad, float64(healthyElevators)/float64(max(len(m.elevators), 1))),
+		"timestamp":           time.Now().Format(time.RFC3339), // OpenAPI spec expects date-time format
+	}
+}
+
+// calculatePerformanceScore calculates a performance score based on load and health
+func (m *Manager) calculatePerformanceScore(avgLoad, healthRatio float64) float64 {
+	// Performance score considers both load efficiency and system health
+	// Score ranges from 0.0 (poor) to 1.0 (excellent)
+
+	// Load efficiency: lower load is better (up to a reasonable point)
+	loadScore := 1.0
+	if avgLoad > 2.0 {
+		loadScore = 2.0 / avgLoad // Penalize high load
+	} else if avgLoad < 0.5 {
+		loadScore = avgLoad / 0.5 // Reward moderate utilization
+	}
+
+	// Health score is directly proportional to healthy elevators ratio
+	healthScore := healthRatio
+
+	// Combined score: 60% health, 40% load efficiency
+	return (healthScore * 0.6) + (loadScore * 0.4)
+}
+
+// max returns the maximum of two integers
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// abs returns the absolute value of an integer
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+// Shutdown gracefully shuts down all elevators
+func (m *Manager) Shutdown() {
+	m.logger.Info("shutting down elevator manager")
+
+	// Shutdown all elevators
+	elevators := m.GetElevators()
+	for _, e := range elevators {
+		e.Shutdown()
+	}
+
+	// Cancel manager context
+	if m.cancel != nil {
+		m.cancel()
+	}
+
+	m.logger.Info("elevator manager shutdown completed")
 }
