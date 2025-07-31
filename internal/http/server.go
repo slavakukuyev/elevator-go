@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 	"time"
@@ -155,7 +156,7 @@ func (s *Server) setupHealthChecks(manager *manager.Manager) {
 	// Manager health checker
 	managerHealthChecker := health.NewComponentHealthChecker("manager", func(ctx context.Context) (bool, string, map[string]interface{}) {
 		elevators := manager.GetElevators()
-		
+
 		// System is healthy when there are 0 elevators - this is a valid initial state
 		if len(elevators) == 0 {
 			return true, "System ready for elevator creation", map[string]interface{}{
@@ -218,7 +219,10 @@ func (s *Server) livenessHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
 
-	json.NewEncoder(w).Encode(result)
+	if err := json.NewEncoder(w).Encode(result); err != nil {
+		// Log error but can't write to response as headers may already be sent
+		log.Printf("failed to encode response: %v", err)
+	}
 }
 
 // readinessHandler handles readiness probe requests
@@ -241,7 +245,10 @@ func (s *Server) readinessHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
 
-	json.NewEncoder(w).Encode(result)
+	if err := json.NewEncoder(w).Encode(result); err != nil {
+		// Log error but can't write to response as headers may already be sent
+		log.Printf("failed to encode response: %v", err)
+	}
 }
 
 // detailedHealthHandler provides comprehensive health status
@@ -274,7 +281,10 @@ func (s *Server) detailedHealthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		// Log error but can't write to response as headers may already be sent
+		log.Printf("failed to encode response: %v", err)
+	}
 }
 
 // countChecksWithStatus counts health checks with a specific status
@@ -582,9 +592,16 @@ func (s *Server) statusWebSocketHandler(w http.ResponseWriter, r *http.Request) 
 	wsCtx := ctx
 
 	// Set up pong handler for keep-alive
-	ws.SetReadDeadline(time.Now().Add(s.cfg.WebSocketReadTimeout))
+	if err := ws.SetReadDeadline(time.Now().Add(s.cfg.WebSocketReadTimeout)); err != nil {
+		s.logger.ErrorContext(ctx, "failed to set read deadline",
+			slog.String("error", err.Error()))
+		return
+	}
 	ws.SetPongHandler(func(string) error {
-		ws.SetReadDeadline(time.Now().Add(s.cfg.WebSocketReadTimeout))
+		if err := ws.SetReadDeadline(time.Now().Add(s.cfg.WebSocketReadTimeout)); err != nil {
+			s.logger.ErrorContext(ctx, "failed to set read deadline in pong handler",
+				slog.String("error", err.Error()))
+		}
 		return nil
 	})
 
@@ -613,12 +630,19 @@ func (s *Server) statusWebSocketHandler(w http.ResponseWriter, r *http.Request) 
 		case <-wsCtx.Done():
 			s.logger.InfoContext(ctx, "WebSocket connection context cancelled")
 			// Send close message to client
-			ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Server shutdown"), time.Now().Add(s.cfg.WebSocketWriteTimeout))
+			if err := ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Server shutdown"), time.Now().Add(s.cfg.WebSocketWriteTimeout)); err != nil {
+				s.logger.ErrorContext(ctx, "failed to send close message",
+					slog.String("error", err.Error()))
+			}
 			return
 
 		case <-pingTicker.C:
 			// Send ping message to keep connection alive
-			ws.SetWriteDeadline(time.Now().Add(s.cfg.WebSocketWriteTimeout))
+			if err := ws.SetWriteDeadline(time.Now().Add(s.cfg.WebSocketWriteTimeout)); err != nil {
+				s.logger.ErrorContext(ctx, "failed to set write deadline for ping",
+					slog.String("error", err.Error()))
+				return
+			}
 			if err := ws.WriteMessage(websocket.PingMessage, nil); err != nil {
 				s.logger.ErrorContext(ctx, "failed to send ping message",
 					slog.String("error", err.Error()))
@@ -657,7 +681,11 @@ func (s *Server) statusWebSocketHandler(w http.ResponseWriter, r *http.Request) 
 			}
 
 			// Set write deadline and send the updated status to the client
-			ws.SetWriteDeadline(time.Now().Add(s.cfg.WebSocketWriteTimeout))
+			if err := ws.SetWriteDeadline(time.Now().Add(s.cfg.WebSocketWriteTimeout)); err != nil {
+				s.logger.ErrorContext(ctx, "failed to set write deadline for status update",
+					slog.String("error", err.Error()))
+				return
+			}
 			err = ws.WriteJSON(st)
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed to send status update via WebSocket",

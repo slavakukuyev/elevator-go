@@ -374,7 +374,9 @@ func (suite *AcceptanceTestSuite) TestWebSocketStatusUpdates() {
 		defer ws.Close()
 
 		// Read initial status with timeout
-		ws.SetReadDeadline(time.Now().Add(2 * time.Second))
+		if err := ws.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+			t.Errorf("failed to set read deadline: %v", err)
+		}
 		var initialStatus map[string]interface{}
 		err = ws.ReadJSON(&initialStatus)
 		require.NoError(t, err)
@@ -385,7 +387,9 @@ func (suite *AcceptanceTestSuite) TestWebSocketStatusUpdates() {
 		resp.Body.Close()
 
 		// Read updated status with timeout
-		ws.SetReadDeadline(time.Now().Add(2 * time.Second))
+		if err := ws.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+			t.Errorf("failed to set read deadline: %v", err)
+		}
 		var updatedStatus map[string]interface{}
 		err = ws.ReadJSON(&updatedStatus)
 		require.NoError(t, err)

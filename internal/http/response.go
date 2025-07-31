@@ -46,6 +46,21 @@ type ResponseWriter struct {
 	startTime time.Time
 }
 
+// Header returns the header map that will be sent by WriteHeader
+func (rw *ResponseWriter) Header() http.Header {
+	return rw.ResponseWriter.Header()
+}
+
+// Write writes the data to the connection as part of an HTTP reply
+func (rw *ResponseWriter) Write(data []byte) (int, error) {
+	return rw.ResponseWriter.Write(data)
+}
+
+// WriteHeader sends an HTTP response header with the provided status code
+func (rw *ResponseWriter) WriteHeader(statusCode int) {
+	rw.ResponseWriter.WriteHeader(statusCode)
+}
+
 // Hijack implements http.Hijacker interface for WebSocket support
 func (rw *ResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	if hijacker, ok := rw.ResponseWriter.(http.Hijacker); ok {
@@ -88,12 +103,20 @@ func (rw *ResponseWriter) WriteJSON(statusCode int, data interface{}) {
 			slog.String("request_id", rw.requestID))
 		// Write error response instead
 		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte(`{"success":false,"error":{"code":"INTERNAL_ERROR","message":"Internal server error"},"timestamp":"` + time.Now().Format(time.RFC3339) + `"}`))
+		if _, writeErr := rw.Write([]byte(`{"success":false,"error":{"code":"INTERNAL_ERROR","message":"Internal server error"},"timestamp":"` + time.Now().Format(time.RFC3339) + `"}`)); writeErr != nil {
+			rw.logger.Error("failed to write error response",
+				slog.String("error", writeErr.Error()),
+				slog.String("request_id", rw.requestID))
+		}
 		return
 	}
 
 	rw.WriteHeader(statusCode)
-	rw.Write(encoded)
+	if _, writeErr := rw.Write(encoded); writeErr != nil {
+		rw.logger.Error("failed to write JSON response",
+			slog.String("error", writeErr.Error()),
+			slog.String("request_id", rw.requestID))
+	}
 }
 
 // WriteError writes a JSON error response with the standard API format

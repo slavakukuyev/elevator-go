@@ -293,7 +293,9 @@ func TestTelemetryProvider_TelemetryMiddleware(t *testing.T) {
 
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("OK"))
+			if _, err := w.Write([]byte("OK")); err != nil {
+				t.Errorf("failed to write response: %v", err)
+			}
 		})
 
 		wrappedHandler := middleware(handler)
@@ -313,7 +315,9 @@ func TestTelemetryProvider_TelemetryMiddleware(t *testing.T) {
 
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Error"))
+			if _, err := w.Write([]byte("Error")); err != nil {
+				t.Errorf("failed to write response: %v", err)
+			}
 		})
 
 		wrappedHandler := middleware(handler)

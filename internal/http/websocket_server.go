@@ -89,9 +89,11 @@ func (ws *WebSocketServer) closeAllConnections() {
 
 	for conn, cancel := range ws.connections {
 		// Send close message
-		conn.WriteControl(websocket.CloseMessage,
+		if err := conn.WriteControl(websocket.CloseMessage,
 			websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Server shutdown"),
-			time.Now().Add(1*time.Second))
+			time.Now().Add(1*time.Second)); err != nil {
+			ws.logger.Error("failed to send close message", slog.String("error", err.Error()))
+		}
 		cancel()
 		conn.Close()
 	}
@@ -125,9 +127,14 @@ func (ws *WebSocketServer) statusHandler(w http.ResponseWriter, r *http.Request)
 	)
 
 	// Set read deadline and pong handler for keep-alive
-	conn.SetReadDeadline(time.Now().Add(pongWait))
+	if err := conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+		ws.logger.Error("failed to set read deadline", slog.String("error", err.Error()))
+		return
+	}
 	conn.SetPongHandler(func(string) error {
-		conn.SetReadDeadline(time.Now().Add(pongWait))
+		if err := conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+			ws.logger.Error("failed to set read deadline in pong handler", slog.String("error", err.Error()))
+		}
 		return nil
 	})
 
@@ -138,7 +145,10 @@ func (ws *WebSocketServer) statusHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	conn.SetWriteDeadline(time.Now().Add(writeWait))
+	if err := conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+		ws.logger.Error("failed to set write deadline for initial status", slog.String("error", err.Error()))
+		return
+	}
 	if err := conn.WriteJSON(status); err != nil {
 		ws.logger.Error("Failed to send initial status", slog.String("component", "websocket-server"), slog.String("error", err.Error()))
 		return
@@ -178,11 +188,16 @@ func (ws *WebSocketServer) statusHandler(w http.ResponseWriter, r *http.Request)
 		case <-ctx.Done():
 			ws.logger.Info("WebSocket connection context cancelled", slog.String("component", "websocket-server"))
 			// Send close message to client
-			conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Server shutdown"), time.Now().Add(writeWait))
+			if err := conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Server shutdown"), time.Now().Add(writeWait)); err != nil {
+				ws.logger.Error("failed to send close message", slog.String("error", err.Error()))
+			}
 			return
 
 		case <-pingTicker.C:
-			conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				ws.logger.Error("failed to set write deadline for ping", slog.String("error", err.Error()))
+				return
+			}
 			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				ws.logger.Error("Failed to send ping message", slog.String("component", "websocket-server"), slog.String("error", err.Error()))
 				return
@@ -218,7 +233,10 @@ func (ws *WebSocketServer) statusHandler(w http.ResponseWriter, r *http.Request)
 			}
 
 			// Send status update with timeout
-			conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				ws.logger.Error("failed to set write deadline for status update", slog.String("error", err.Error()))
+				return
+			}
 			if err := conn.WriteJSON(st); err != nil {
 				ws.logger.Error("Failed to send status", slog.String("component", "websocket-server"), slog.String("error", err.Error()))
 				return

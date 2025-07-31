@@ -31,7 +31,9 @@ func TestChainMiddleware(t *testing.T) {
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		if _, err := w.Write([]byte("OK")); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
 	})
 
 	// Chain middlewares
@@ -96,7 +98,9 @@ func TestLoggingMiddleware(t *testing.T) {
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("test response"))
+		if _, err := w.Write([]byte("test response")); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
 	})
 
 	w := httptest.NewRecorder()
@@ -154,7 +158,9 @@ func TestRecoveryMiddleware(t *testing.T) {
 	t.Run("passes through normal requests", func(t *testing.T) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("normal response"))
+			if _, err := w.Write([]byte("normal response")); err != nil {
+				t.Errorf("failed to write response: %v", err)
+			}
 		})
 
 		w := httptest.NewRecorder()
@@ -173,7 +179,9 @@ func TestCORSMiddleware(t *testing.T) {
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		if _, err := w.Write([]byte("OK")); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
 	})
 
 	t.Run("adds CORS headers to regular requests", func(t *testing.T) {
@@ -214,7 +222,9 @@ func TestSecurityHeadersMiddleware(t *testing.T) {
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		if _, err := w.Write([]byte("OK")); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
 	})
 
 	w := httptest.NewRecorder()
@@ -253,7 +263,9 @@ func TestRateLimitMiddleware_Handler(t *testing.T) {
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		if _, err := w.Write([]byte("OK")); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
 	})
 
 	t.Run("allows requests under limit", func(t *testing.T) {
@@ -425,7 +437,9 @@ func TestMiddlewareIntegration(t *testing.T) {
 		assert.NotEmpty(t, requestID)
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("integration test"))
+		if _, err := w.Write([]byte("integration test")); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
 	})
 
 	// Create middleware chain
