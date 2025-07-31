@@ -22,7 +22,7 @@ jobs:
     - name: Install golangci-lint
       uses: golangci/golangci-lint-action@v7
       with:
-        version: v2.3.0
+        version: latest
         args: --config=.golangci.yml
 
     - name: Build Docker image
