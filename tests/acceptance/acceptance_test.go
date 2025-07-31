@@ -507,7 +507,9 @@ func (suite *AcceptanceTestSuite) TestRealWorldWorkflows() {
 		// Morning rush - people going up from lobby
 		for i := 0; i < 5; i++ {
 			resp := suite.requestFloor(0, (i%10)+2)
-			resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 		}
 
@@ -519,7 +521,9 @@ func (suite *AcceptanceTestSuite) TestRealWorldWorkflows() {
 
 		for _, req := range lunchRequests {
 			resp := suite.requestFloor(req.from, req.to)
-			resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 		}
 	})
@@ -543,7 +547,11 @@ func (suite *AcceptanceTestSuite) TestRealWorldWorkflows() {
 		for _, journey := range journeys {
 			t.Run(journey.name, func(t *testing.T) {
 				resp := suite.requestFloor(journey.from, journey.to)
-				defer resp.Body.Close()
+				defer func() {
+					if err := resp.Body.Close(); err != nil {
+						t.Logf("Failed to close response body: %v", err)
+					}
+				}()
 				assert.Equal(t, http.StatusOK, resp.StatusCode)
 			})
 		}
@@ -563,7 +571,9 @@ func (suite *AcceptanceTestSuite) TestSystemResilience() {
 			if resp.StatusCode == http.StatusOK {
 				successCount++
 			}
-			resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
 		}
 
 		// Should handle rapid requests gracefully
@@ -575,7 +585,11 @@ func (suite *AcceptanceTestSuite) TestSystemResilience() {
 		// Make request when no elevators can serve the floor range - this is a validation error
 		// since the floors are outside the range of existing elevators (0-10)
 		resp := suite.requestFloor(50, 60) // Beyond any elevator's range
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode) // Fixed: validation error should return 400, not 404
 	})
 
@@ -585,11 +599,19 @@ func (suite *AcceptanceTestSuite) TestSystemResilience() {
 
 		// Test requests at the exact boundaries of elevator capabilities
 		resp := suite.requestFloor(0, 20) // Full range
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		resp = suite.requestFloor(20, 0) // Full range reverse
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 }
@@ -601,13 +623,19 @@ func (suite *AcceptanceTestSuite) TestMetricsEndpoint() {
 		// Make some requests to generate metrics
 		for i := 0; i < 3; i++ {
 			resp := suite.requestFloor(i%8, (i%8)+2)
-			resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
 		}
 
 		// Check metrics endpoint
 		resp, err := http.Get(suite.testSrv.URL + "/metrics")
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 		assert.Contains(t, resp.Header.Get("Content-Type"), "text/plain")
@@ -643,7 +671,11 @@ func (suite *AcceptanceTestSuite) TestHTTPMethodValidation() {
 			client := &http.Client{}
 			resp, err := client.Do(req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() {
+				if err := resp.Body.Close(); err != nil {
+					t.Logf("Failed to close response body: %v", err)
+				}
+			}()
 
 			assert.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
 		})

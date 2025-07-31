@@ -85,7 +85,11 @@ func TestElevatorServiceIntegration(t *testing.T) {
 	t.Run("Health Check", func(t *testing.T) {
 		resp, err := client.Get(baseURL + "/v1/health/live")
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 		t.Logf("✅ Health check passed")
 	})
@@ -94,7 +98,11 @@ func TestElevatorServiceIntegration(t *testing.T) {
 	t.Run("Metrics Endpoint", func(t *testing.T) {
 		resp, err := client.Get(baseURL + "/metrics")
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 		t.Logf("✅ Metrics endpoint accessible")
 	})
@@ -112,7 +120,11 @@ func TestElevatorServiceIntegration(t *testing.T) {
 
 		resp, err := client.Post(baseURL+"/elevator", "application/json", bytes.NewBuffer(jsonBody))
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 		t.Logf("✅ Elevator created successfully")
@@ -146,7 +158,11 @@ func TestElevatorServiceIntegration(t *testing.T) {
 
 				resp, err := client.Post(baseURL+"/floor", "application/json", bytes.NewBuffer(jsonBody))
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer func() {
+					if err := resp.Body.Close(); err != nil {
+						t.Logf("Failed to close response body: %v", err)
+					}
+				}()
 
 				assert.Equal(t, tc.expected, resp.StatusCode)
 				t.Logf("✅ Floor request %d→%d: %s", tc.from, tc.to, resp.Status)
@@ -167,7 +183,11 @@ func TestElevatorServiceIntegration(t *testing.T) {
 
 			resp, err := client.Post(baseURL+"/floor", "application/json", bytes.NewBuffer(jsonBody))
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() {
+				if err := resp.Body.Close(); err != nil {
+					t.Logf("Failed to close response body: %v", err)
+				}
+			}()
 
 			assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 			t.Logf("✅ Invalid floor request properly rejected")
@@ -185,7 +205,11 @@ func TestElevatorServiceIntegration(t *testing.T) {
 
 			resp, err := client.Post(baseURL+"/elevator", "application/json", bytes.NewBuffer(jsonBody))
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() {
+				if err := resp.Body.Close(); err != nil {
+					t.Logf("Failed to close response body: %v", err)
+				}
+			}()
 
 			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 			t.Logf("✅ Invalid elevator creation properly rejected")
@@ -206,7 +230,9 @@ func TestElevatorServiceIntegration(t *testing.T) {
 
 			resp, err := client.Post(baseURL+"/elevator", "application/json", bytes.NewBuffer(jsonBody))
 			require.NoError(t, err)
-			resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 		}
 
@@ -238,7 +264,9 @@ func TestElevatorServiceIntegration(t *testing.T) {
 						results <- fmt.Errorf("request error: %w", err)
 						return
 					}
-					resp.Body.Close()
+					if err := resp.Body.Close(); err != nil {
+						t.Logf("Failed to close response body: %v", err)
+					}
 
 					if resp.StatusCode != http.StatusOK {
 						results <- fmt.Errorf("unexpected status: %d", resp.StatusCode)
@@ -327,7 +355,9 @@ func TestContainerizedSystemWorkflow(t *testing.T) {
 
 			resp, err := client.Post(baseURL+"/elevator", "application/json", bytes.NewBuffer(jsonBody))
 			require.NoError(t, err)
-			resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 			t.Logf("✅ Created %s (%d/%d)", elevator.Name, i+1, len(elevators))
 		}
@@ -354,7 +384,9 @@ func TestContainerizedSystemWorkflow(t *testing.T) {
 
 				resp, err := client.Post(baseURL+"/floor", "application/json", bytes.NewBuffer(jsonBody))
 				require.NoError(t, err)
-				resp.Body.Close()
+				if err := resp.Body.Close(); err != nil {
+					t.Logf("Failed to close response body: %v", err)
+				}
 				// Accept either success (200) or no available elevator (404)
 				assert.Contains(t, []int{http.StatusOK, http.StatusNotFound}, resp.StatusCode)
 				status := "accepted"
@@ -384,7 +416,9 @@ func TestContainerizedSystemWorkflow(t *testing.T) {
 
 				resp, err := client.Post(baseURL+"/floor", "application/json", bytes.NewBuffer(jsonBody))
 				require.NoError(t, err)
-				resp.Body.Close()
+				if err := resp.Body.Close(); err != nil {
+					t.Logf("Failed to close response body: %v", err)
+				}
 				assert.Equal(t, http.StatusOK, resp.StatusCode)
 			}
 
@@ -395,7 +429,11 @@ func TestContainerizedSystemWorkflow(t *testing.T) {
 		t.Run("System Metrics After Load", func(t *testing.T) {
 			resp, err := client.Get(baseURL + "/metrics")
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() {
+				if err := resp.Body.Close(); err != nil {
+					t.Logf("Failed to close response body: %v", err)
+				}
+			}()
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 			t.Logf("✅ System metrics available after load testing")
 		})
@@ -404,7 +442,11 @@ func TestContainerizedSystemWorkflow(t *testing.T) {
 		t.Run("Health Check After Load", func(t *testing.T) {
 			resp, err := client.Get(baseURL + "/v1/health/live")
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() {
+				if err := resp.Body.Close(); err != nil {
+					t.Logf("Failed to close response body: %v", err)
+				}
+			}()
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 			t.Logf("✅ System healthy after comprehensive testing")
 		})
@@ -451,7 +493,11 @@ func TestWithTestcontainers(t *testing.T) {
 	// Test that the service is running
 	resp, err := http.Get(url)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Logf("Failed to close response body: %v", err)
+		}
+	}()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
