@@ -1,0 +1,5 @@
+---
+globs: *.sh,*.yaml,*.yml,Dockerfile,Makefile
+alwaysApply: false
+---
+Use instructions from [devops_rules.md](mdc:docs/devops_rules.md)
