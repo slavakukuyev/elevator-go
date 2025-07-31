@@ -466,16 +466,28 @@ func TestAgentDetector(t *testing.T) {
 	})
 
 	t.Run("detect OpenTelemetry agent", func(t *testing.T) {
-		os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
-		defer os.Unsetenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+		if err := os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"); err != nil {
+			t.Fatalf("Failed to set OTEL_EXPORTER_OTLP_ENDPOINT: %v", err)
+		}
+		defer func() {
+			if err := os.Unsetenv("OTEL_EXPORTER_OTLP_ENDPOINT"); err != nil {
+				t.Logf("Failed to unset OTEL_EXPORTER_OTLP_ENDPOINT: %v", err)
+			}
+		}()
 
 		config := detector.DetectAgents()
 		assert.True(t, config.OTelAgentEnabled)
 	})
 
 	t.Run("detect Filebeat agent", func(t *testing.T) {
-		os.Setenv("ELASTIC_CLOUD_ID", "test-cloud-id")
-		defer os.Unsetenv("ELASTIC_CLOUD_ID")
+		if err := os.Setenv("ELASTIC_CLOUD_ID", "test-cloud-id"); err != nil {
+			t.Fatalf("Failed to set ELASTIC_CLOUD_ID: %v", err)
+		}
+		defer func() {
+			if err := os.Unsetenv("ELASTIC_CLOUD_ID"); err != nil {
+				t.Logf("Failed to unset ELASTIC_CLOUD_ID: %v", err)
+			}
+		}()
 
 		config := detector.DetectAgents()
 		assert.True(t, config.FilebeatEnabled)

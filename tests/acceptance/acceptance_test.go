@@ -64,10 +64,18 @@ func (suite *AcceptanceTestSuite) TearDownSuite() {
 // SetupTest ensures clean state for each test
 func (suite *AcceptanceTestSuite) SetupTest() {
 	// Set testing environment to get proper defaults
-	os.Setenv("ENV", "testing")
-	os.Setenv("LOG_LEVEL", "ERROR") // Reduce noise in tests
-	os.Setenv("DEFAULT_MIN_FLOOR", "-10")
-	os.Setenv("DEFAULT_MAX_FLOOR", "50")
+	if err := os.Setenv("ENV", "testing"); err != nil {
+		suite.T().Fatalf("Failed to set ENV: %v", err)
+	}
+	if err := os.Setenv("LOG_LEVEL", "ERROR"); err != nil { // Reduce noise in tests
+		suite.T().Fatalf("Failed to set LOG_LEVEL: %v", err)
+	}
+	if err := os.Setenv("DEFAULT_MIN_FLOOR", "-10"); err != nil {
+		suite.T().Fatalf("Failed to set DEFAULT_MIN_FLOOR: %v", err)
+	}
+	if err := os.Setenv("DEFAULT_MAX_FLOOR", "50"); err != nil {
+		suite.T().Fatalf("Failed to set DEFAULT_MAX_FLOOR: %v", err)
+	}
 
 	// Create configuration using proper initialization to get testing defaults
 	var err error
@@ -94,10 +102,18 @@ func (suite *AcceptanceTestSuite) TearDownTest() {
 	}
 
 	// Clean up environment variables
-	os.Unsetenv("ENV")
-	os.Unsetenv("LOG_LEVEL")
-	os.Unsetenv("DEFAULT_MIN_FLOOR")
-	os.Unsetenv("DEFAULT_MAX_FLOOR")
+	if err := os.Unsetenv("ENV"); err != nil {
+		suite.T().Logf("Failed to unset ENV: %v", err)
+	}
+	if err := os.Unsetenv("LOG_LEVEL"); err != nil {
+		suite.T().Logf("Failed to unset LOG_LEVEL: %v", err)
+	}
+	if err := os.Unsetenv("DEFAULT_MIN_FLOOR"); err != nil {
+		suite.T().Logf("Failed to unset DEFAULT_MIN_FLOOR: %v", err)
+	}
+	if err := os.Unsetenv("DEFAULT_MAX_FLOOR"); err != nil {
+		suite.T().Logf("Failed to unset DEFAULT_MAX_FLOOR: %v", err)
+	}
 
 	// Allow cleanup time
 	time.Sleep(10 * time.Millisecond)
@@ -208,7 +224,11 @@ func (suite *AcceptanceTestSuite) TestElevatorCreationAndBasicOperations() {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				resp := suite.requestFloor(tc.from, tc.to)
-				defer resp.Body.Close()
+				defer func() {
+					if err := resp.Body.Close(); err != nil {
+						t.Logf("Failed to close response body: %v", err)
+					}
+				}()
 				assert.Equal(t, tc.expected, resp.StatusCode)
 			})
 		}
@@ -319,7 +339,11 @@ func (suite *AcceptanceTestSuite) TestEdgeCasesAndErrorHandling() {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				resp := suite.requestFloor(tc.from, tc.to)
-				defer resp.Body.Close()
+				defer func() {
+					if err := resp.Body.Close(); err != nil {
+						t.Logf("Failed to close response body: %v", err)
+					}
+				}()
 				assert.Equal(t, tc.expected, resp.StatusCode)
 			})
 		}
@@ -350,7 +374,11 @@ func (suite *AcceptanceTestSuite) TestEdgeCasesAndErrorHandling() {
 
 				resp, err := http.Post(suite.testSrv.URL+"/elevator", "application/json", bytes.NewBuffer(jsonBody))
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer func() {
+					if err := resp.Body.Close(); err != nil {
+						t.Logf("Failed to close response body: %v", err)
+					}
+				}()
 
 				assert.Equal(t, tc.expectedStatus, resp.StatusCode)
 			})
@@ -627,15 +655,31 @@ func TestQuickAcceptance(t *testing.T) {
 	logging.InitLogger("ERROR")
 
 	// Set testing environment to get proper defaults including no rate limiting
-	os.Setenv("ENV", "testing")
-	os.Setenv("LOG_LEVEL", "ERROR")
-	os.Setenv("DEFAULT_MIN_FLOOR", "-10")
-	os.Setenv("DEFAULT_MAX_FLOOR", "50")
+	if err := os.Setenv("ENV", "testing"); err != nil {
+		t.Fatalf("Failed to set ENV: %v", err)
+	}
+	if err := os.Setenv("LOG_LEVEL", "ERROR"); err != nil {
+		t.Fatalf("Failed to set LOG_LEVEL: %v", err)
+	}
+	if err := os.Setenv("DEFAULT_MIN_FLOOR", "-10"); err != nil {
+		t.Fatalf("Failed to set DEFAULT_MIN_FLOOR: %v", err)
+	}
+	if err := os.Setenv("DEFAULT_MAX_FLOOR", "50"); err != nil {
+		t.Fatalf("Failed to set DEFAULT_MAX_FLOOR: %v", err)
+	}
 	defer func() {
-		os.Unsetenv("ENV")
-		os.Unsetenv("LOG_LEVEL")
-		os.Unsetenv("DEFAULT_MIN_FLOOR")
-		os.Unsetenv("DEFAULT_MAX_FLOOR")
+		if err := os.Unsetenv("ENV"); err != nil {
+			t.Logf("Failed to unset ENV: %v", err)
+		}
+		if err := os.Unsetenv("LOG_LEVEL"); err != nil {
+			t.Logf("Failed to unset LOG_LEVEL: %v", err)
+		}
+		if err := os.Unsetenv("DEFAULT_MIN_FLOOR"); err != nil {
+			t.Logf("Failed to unset DEFAULT_MIN_FLOOR: %v", err)
+		}
+		if err := os.Unsetenv("DEFAULT_MAX_FLOOR"); err != nil {
+			t.Logf("Failed to unset DEFAULT_MAX_FLOOR: %v", err)
+		}
 	}()
 
 	cfg, err := config.InitConfig()
@@ -729,8 +773,12 @@ func TestZeroElevatorsHealthyState(t *testing.T) {
 		// Test the complete system behavior with zero elevators
 
 		// Initialize test configuration using the same approach as existing tests
-		os.Setenv("ENV", "testing")
-		os.Setenv("LOG_LEVEL", "ERROR")
+		if err := os.Setenv("ENV", "testing"); err != nil {
+			t.Fatalf("Failed to set ENV: %v", err)
+		}
+		if err := os.Setenv("LOG_LEVEL", "ERROR"); err != nil {
+			t.Fatalf("Failed to set LOG_LEVEL: %v", err)
+		}
 		cfg, err := config.InitConfig()
 		require.NoError(t, err, "Config initialization should not error")
 
@@ -825,8 +873,12 @@ func TestZeroElevatorsHealthyState(t *testing.T) {
 func TestSystemHealthTransitions(t *testing.T) {
 	t.Run("Health status transitions through elevator lifecycle", func(t *testing.T) {
 		// Initialize test configuration
-		os.Setenv("ENV", "testing")
-		os.Setenv("LOG_LEVEL", "ERROR")
+		if err := os.Setenv("ENV", "testing"); err != nil {
+			t.Fatalf("Failed to set ENV: %v", err)
+		}
+		if err := os.Setenv("LOG_LEVEL", "ERROR"); err != nil {
+			t.Fatalf("Failed to set LOG_LEVEL: %v", err)
+		}
 		cfg, err := config.InitConfig()
 		require.NoError(t, err, "Config initialization should not error")
 
