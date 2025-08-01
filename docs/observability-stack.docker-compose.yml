@@ -1,0 +1,333 @@
+version: '3.8'
+
+# Complete Observability Stack for Elevator Control System
+# This Docker Compose file demonstrates how to set up a full observability stack
+# with the elevator control system and various external agents/platforms
+
+services:
+  # =============================================================================
+  # ELEVATOR CONTROL SYSTEM
+  # =============================================================================
+  elevator-system:
+    build: .
+    ports:
+      - "6660:6660"  # Main API
+      - "8080:8080"  # Metrics endpoint
+    environment:
+      # Core settings
+      OBSERVABILITY_ENABLED: "true"
+      SERVICE_NAME: "elevator-control-system"
+      SERVICE_VERSION: "1.0.0"
+      ENVIRONMENT: "docker"
+      
+      # Auto-detection (will detect agents below)
+      AGENTS_AUTO_DETECT: "true"
+      
+      # DataDog configuration
+      DD_API_KEY: "${DD_API_KEY:-}"
+      DD_AGENT_HOST: "datadog-agent"
+      DATADOG_ENABLED: "true"
+      DATADOG_APM_ENABLED: "true"
+      
+      # OpenTelemetry configuration
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      OTLP_ENABLED: "true"
+      
+      # FluentBit configuration
+      FLUENTD_HOST: "fluentbit"
+      
+      # Elasticsearch configuration
+      ELASTIC_ENABLED: "true"
+      ELASTIC_HOST: "elasticsearch"
+      
+      # Prometheus configuration
+      PROMETHEUS_ENABLED: "true"
+      PROMETHEUS_PUSH_ENABLED: "true"
+      PROMETHEUS_PUSH_GATEWAY: "http://prometheus-pushgateway:9091"
+      
+      # Metrics and logging
+      METRICS_PUSH_ENABLED: "true"
+      METRICS_PULL_ENABLED: "true"
+      LOGGING_FORMAT: "json"
+      LOGGING_OUTPUT: "stdout"
+      TRACING_ENABLED: "true"
+      TRACING_SAMPLING_RATIO: "1.0"
+      
+    depends_on:
+      - elasticsearch
+      - fluentbit
+      - prometheus
+      - datadog-agent
+      - otel-collector
+    volumes:
+      - ./logs:/var/log
+    networks:
+      - observability
+
+  # =============================================================================
+  # DATADOG STACK
+  # =============================================================================
+  datadog-agent:
+    image: datadog/agent:latest
+    environment:
+      DD_API_KEY: "${DD_API_KEY:-dummy_key_for_demo}"
+      DD_SITE: "datadoghq.com"
+      DD_APM_ENABLED: "true"
+      DD_APM_NON_LOCAL_TRAFFIC: "true"
+      DD_LOGS_ENABLED: "true"
+      DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL: "true"
+      DD_CONTAINER_EXCLUDE: "name:datadog-agent"
+      DD_DOGSTATSD_NON_LOCAL_TRAFFIC: "true"
+    ports:
+      - "8125:8125/udp"  # StatsD
+      - "8126:8126"      # APM
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - observability
+
+  # =============================================================================
+  # ELASTICSEARCH STACK
+  # =============================================================================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - observability
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - observability
+
+  # =============================================================================
+  # FLUENTBIT STACK
+  # =============================================================================
+  fluentbit:
+    image: fluent/fluent-bit:latest
+    ports:
+      - "24224:24224"  # Forward protocol
+      - "24224:24224/udp"
+    volumes:
+      - ./fluentbit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./logs:/var/log:ro
+    depends_on:
+      - elasticsearch
+    networks:
+      - observability
+
+  # =============================================================================
+  # PROMETHEUS STACK
+  # =============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - observability
+
+  prometheus-pushgateway:
+    image: prom/pushgateway:latest
+    ports:
+      - "9091:9091"
+    networks:
+      - observability
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - observability
+
+  # =============================================================================
+  # OPENTELEMETRY STACK
+  # =============================================================================
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # Prometheus metrics
+      - "8889:8889"   # Prometheus exporter metrics
+    volumes:
+      - ./otel-collector.yml:/etc/otelcol-contrib/otel-collector.yml:ro
+    command: ["--config=/etc/otelcol-contrib/otel-collector.yml"]
+    depends_on:
+      - prometheus
+      - elasticsearch
+    networks:
+      - observability
+
+  # =============================================================================
+  # JAEGER (Alternative to DataDog APM)
+  # =============================================================================
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"  # Web UI
+      - "14250:14250"  # gRPC
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks:
+      - observability
+
+networks:
+  observability:
+    driver: bridge
+
+volumes:
+  elasticsearch-data:
+  prometheus-data:
+  grafana-data:
+
+---
+# Additional configuration files needed for this setup:
+
+# prometheus.yml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'elevator-system'
+    static_configs:
+      - targets: ['elevator-system:8080']
+    scrape_interval: 5s
+
+  - job_name: 'prometheus-pushgateway'
+    static_configs:
+      - targets: ['prometheus-pushgateway:9091']
+
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8888']
+
+---
+# fluentbit.conf
+[SERVICE]
+    Flush        1
+    Log_Level    info
+    Daemon       off
+    Parsers_File parsers.conf
+
+[INPUT]
+    Name         forward
+    Listen       0.0.0.0
+    Port         24224
+
+[INPUT]
+    Name         tail
+    Path         /var/log/*.log
+    Parser       json
+    Tag          elevator.*
+
+[OUTPUT]
+    Name         es
+    Match        *
+    Host         elasticsearch
+    Port         9200
+    Index        elevator-logs
+    Type         _doc
+
+---
+# otel-collector.yml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+  
+  elasticsearch:
+    endpoints: ["http://elasticsearch:9200"]
+    logs_index: "elevator-logs"
+    traces_index: "elevator-traces"
+  
+  jaeger:
+    endpoint: jaeger:14250
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [jaeger, elasticsearch]
+    
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus, elasticsearch]
+    
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [elasticsearch]
+
+---
+# Usage Instructions:
+
+# 1. Set up environment variables:
+# export DD_API_KEY=your_datadog_api_key
+
+# 2. Start the full stack:
+# docker-compose -f observability-stack.docker-compose.yml up -d
+
+# 3. Access the services:
+# - Elevator API: http://localhost:6660
+# - Prometheus: http://localhost:9090
+# - Grafana: http://localhost:3000 (admin/admin)
+# - Kibana: http://localhost:5601
+# - Jaeger: http://localhost:16686
+
+# 4. Test the system:
+# curl -X POST http://localhost:6660/v1/elevators -d '{"name":"Test-Elevator","min_floor":0,"max_floor":10}'
+# curl -X POST http://localhost:6660/v1/floors/request -d '{"elevator_name":"Test-Elevator","floor":5}'
+
+# 5. View metrics and logs in:
+# - Grafana dashboards
+# - Kibana logs
+# - DataDog (if API key provided)
+# - Jaeger traces 

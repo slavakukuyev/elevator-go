@@ -10,16 +10,17 @@ import (
 type ElevatorFactory interface {
 	CreateElevator(cfg *config.Config, name string,
 		minFloor, maxFloor int,
-		eachFloorDuration, openDoorDuration time.Duration) (*elevator.T, error)
+		eachFloorDuration, openDoorDuration time.Duration, overloadThreshold int) (*elevator.Elevator, error)
 }
 
 type StandardElevatorFactory struct{}
 
 func (f StandardElevatorFactory) CreateElevator(cfg *config.Config, name string,
 	minFloor, maxFloor int,
-	eachFloorDuration, openDoorDuration time.Duration) (*elevator.T, error) {
+	eachFloorDuration, openDoorDuration time.Duration, overloadThreshold int) (*elevator.Elevator, error) {
 
-	return elevator.New(cfg, name,
+	return elevator.New(name,
 		minFloor, maxFloor,
-		eachFloorDuration, openDoorDuration)
+		eachFloorDuration, openDoorDuration, cfg.OperationTimeout,
+		cfg.CircuitBreakerMaxFailures, cfg.CircuitBreakerResetTimeout, cfg.CircuitBreakerHalfOpenLimit, overloadThreshold)
 }
