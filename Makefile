@@ -162,7 +162,16 @@ test/unit:
 	go test -v -short $(UNIT_PKGS)
 
 test/race:
-	go test -v -short -race $(UNIT_PKGS)
+	@echo "Running race tests with packages: $(UNIT_PKGS)"
+	@echo "Race tests started at: $(shell date)"
+	GORACE=1 go test -v -race $(UNIT_PKGS)
+	@echo "Race tests completed at: $(shell date)"
+
+test/race-full:
+	@echo "Running full race tests (without -short flag) with packages: $(UNIT_PKGS)"
+	@echo "Full race tests started at: $(shell date)"
+	go test -v -race $(UNIT_PKGS)
+	@echo "Full race tests completed at: $(shell date)"
 
 test/acceptance:
 	go test -v ./tests/acceptance/acceptance_test.go -timeout 60s

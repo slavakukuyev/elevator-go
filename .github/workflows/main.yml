@@ -75,8 +75,51 @@ jobs:
         go-version: ${{ env.GO_VERSION }}
         cache: true
         
-    - name: Run race tests
-      run: make test/race
+    - name: Run race tests with verbose output
+      run: |
+        echo "Starting race tests..."
+        echo "Setting GORACE environment variable..."
+        export GORACE=1
+        make test/race 2>&1 | tee race_test_output.log
+        echo "Race tests completed with exit code: $?"
+        
+    - name: Upload race test logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: race-test-logs
+        path: race_test_output.log
+
+  # Full race condition tests (without -short flag) - for debugging
+  race_tests_full:
+    name: Full Race Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+        
+    - name: Run full race tests with verbose output
+      run: |
+        echo "Starting full race tests (without -short flag)..."
+        echo "Setting GORACE environment variable..."
+        export GORACE=1
+        make test/race-full 2>&1 | tee race_test_full_output.log
+        echo "Full race tests completed with exit code: $?"
+        
+    - name: Upload full race test logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: race-test-full-logs
+        path: race_test_full_output.log
 
   # Integration/Acceptance tests - runs simultaneously with other tests
   integration_tests:
@@ -151,7 +194,7 @@ jobs:
   all-checks:
     name: All Checks Passed
     runs-on: ubuntu-latest
-    needs: [lint, unit_tests, race_tests, integration_tests, build]
+    needs: [lint, unit_tests, race_tests, race_tests_full, integration_tests, build]
     if: always()
     
     steps:
@@ -167,6 +210,10 @@ jobs:
         fi
         if [[ "${{ needs.race_tests.result }}" != "success" ]]; then
           echo "Race tests failed"
+          exit 1
+        fi
+        if [[ "${{ needs.race_tests_full.result }}" != "success" ]]; then
+          echo "Full race tests failed"
           exit 1
         fi
         if [[ "${{ needs.integration_tests.result }}" != "success" ]]; then
