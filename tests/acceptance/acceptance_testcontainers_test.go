@@ -189,7 +189,7 @@ func TestElevatorServiceIntegration(t *testing.T) {
 				}
 			}()
 
-			assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 			t.Logf("✅ Invalid floor request properly rejected")
 		})
 
