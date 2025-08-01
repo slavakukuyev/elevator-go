@@ -29,6 +29,7 @@ func TestElevatorServiceIntegration(t *testing.T) {
 	ctx := context.Background()
 
 	// Build and start the elevator service container
+	t.Logf("🚀 Starting elevator service container build...")
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
 			Context:    "../..", // Go up two levels to project root
@@ -51,15 +52,20 @@ func TestElevatorServiceIntegration(t *testing.T) {
 		},
 		WaitingFor: wait.ForHTTP("/v1/health/live").
 			WithPort("6660/tcp").
-			WithStartupTimeout(60 * time.Second).
+			WithStartupTimeout(120 * time.Second). // Increased timeout for build + startup
 			WithPollInterval(2 * time.Second),
 	}
 
+	t.Logf("⏳ Building and starting container (this may take 2-3 minutes)...")
 	elevatorContainer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
 		Started:          true,
 	})
-	require.NoError(t, err)
+	if err != nil {
+		t.Logf("❌ Container creation failed: %v", err)
+		require.NoError(t, err) // This will fail the test with the original error
+	}
+	t.Logf("✅ Container started successfully!")
 	defer func() {
 		if logs, logErr := elevatorContainer.Logs(ctx); logErr == nil {
 			t.Logf("Container logs available for debugging")
@@ -299,6 +305,7 @@ func TestContainerizedSystemWorkflow(t *testing.T) {
 	ctx := context.Background()
 
 	// Start the elevator service with production-like configuration
+	t.Logf("🚀 Starting elevator service container for workflow test...")
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
 			Context:    "../..",
@@ -319,7 +326,7 @@ func TestContainerizedSystemWorkflow(t *testing.T) {
 		},
 		WaitingFor: wait.ForHTTP("/v1/health/live").
 			WithPort("6660/tcp").
-			WithStartupTimeout(60 * time.Second),
+			WithStartupTimeout(120 * time.Second), // Increased timeout
 	}
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{

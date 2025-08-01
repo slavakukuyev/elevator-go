@@ -168,7 +168,7 @@ test/acceptance:
 	go test -v ./tests/acceptance/acceptance_test.go -timeout 60s
 
 test/integration:
-	go test -v ./tests/acceptance/acceptance_testcontainers_test.go -timeout 90s
+	go test -v ./tests/acceptance/acceptance_testcontainers_test.go -timeout 180s
 
 test/benchmarks:
 	go test -v -bench=. ./tests/benchmarks/...
