@@ -10,7 +10,7 @@ env:
   GO_VERSION: '1.24'
 
 jobs:
-  # Linting job - runs first for fast feedback
+  # Linting job - runs simultaneously with tests
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -32,7 +32,7 @@ jobs:
         version: v2.3.0
         args: --timeout=5m
 
-  # Unit tests job - runs core unit tests
+  # Unit tests job - runs simultaneously with other tests
   unit_tests:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -59,7 +59,7 @@ jobs:
         file: ./coverage.out
         fail_ci_if_error: false
 
-  # Race condition tests - separate job for race detection
+  # Race condition tests - runs simultaneously with other tests
   race_tests:
     name: Race Tests
     runs-on: ubuntu-latest
@@ -78,12 +78,11 @@ jobs:
     - name: Run race tests
       run: make test/race
 
-  # Integration/Acceptance tests - runs acceptance tests
+  # Integration/Acceptance tests - runs simultaneously with other tests
   integration_tests:
     name: Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    needs: [lint] # Only run if linting passes
     
     steps:
     - name: Checkout code
@@ -101,11 +100,12 @@ jobs:
     - name: Run integration tests with testcontainers
       run: make test/integration
 
-  # Build job - builds Docker image in parallel
+  # Build job - runs only after all tests pass
   build:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: [lint, unit_tests, race_tests, integration_tests]
     
     steps:
     - name: Checkout code
@@ -128,12 +128,11 @@ jobs:
       run: |
         docker rmi elevator-service:latest || true
 
-  # Benchmark tests - optional, runs on schedule or manual trigger
+  # Benchmark tests - runs on each push
   benchmarks:
     name: Benchmarks
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
     - name: Checkout code
