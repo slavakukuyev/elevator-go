@@ -341,7 +341,7 @@ func TestPrometheusClient(t *testing.T) {
 		client, err := NewPrometheusClient(config, logger)
 		assert.Error(t, err)
 		assert.Nil(t, client)
-		assert.Contains(t, err.Error(), "Prometheus push gateway not configured")
+		assert.Contains(t, err.Error(), "prometheus push gateway not configured")
 	})
 
 	t.Run("create new Prometheus client without gateway URL", func(t *testing.T) {
@@ -354,7 +354,7 @@ func TestPrometheusClient(t *testing.T) {
 		client, err := NewPrometheusClient(config, logger)
 		assert.Error(t, err)
 		assert.Nil(t, client)
-		assert.Contains(t, err.Error(), "Prometheus push gateway not configured")
+		assert.Contains(t, err.Error(), "prometheus push gateway not configured")
 	})
 
 	t.Run("record metric", func(t *testing.T) {
