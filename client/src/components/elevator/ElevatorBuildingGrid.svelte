@@ -59,13 +59,13 @@
 				<div class="flex gap-4">
 					<button
 						on:click={handleCreateElevator}
-						class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+						class="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
 					>
 						+ Create Elevator
 					</button>
 					<button
 						on:click={() => initializeSampleData()}
-						class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+						class="bg-gray-600 hover:bg-gray-700 dark:bg-gray-500 dark:hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
 					>
 						Load Sample Data
 					</button>

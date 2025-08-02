@@ -113,7 +113,7 @@
 			<!-- Theme Toggle -->
 			<button
 				type="button"
-				class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+				class="theme-toggle text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
 				aria-label="Toggle theme"
 				on:click={handleThemeToggle}
 			>
@@ -138,6 +138,9 @@
 						/>
 					</svg>
 				{/if}
+				<span class="tooltip"
+					>{$theme.mode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span
+				>
 			</button>
 
 			<!-- Help Button -->
@@ -162,7 +165,8 @@
 <style>
 	/* Tooltip styles */
 	.control-panel-toggle,
-	.monitoring-panel-toggle {
+	.monitoring-panel-toggle,
+	.theme-toggle {
 		position: relative;
 	}
 
@@ -196,7 +200,8 @@
 	}
 
 	.control-panel-toggle:hover .tooltip,
-	.monitoring-panel-toggle:hover .tooltip {
+	.monitoring-panel-toggle:hover .tooltip,
+	.theme-toggle:hover .tooltip {
 		opacity: 1;
 		visibility: visible;
 	}
