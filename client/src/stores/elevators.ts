@@ -141,7 +141,7 @@ export async function initializeSampleData() {
     try {
         isLoading.set(true);
         addNotification('Creating sample elevators...');
-        
+
         // Sample elevator configurations
         const sampleConfigs = [
             { name: 'Elevator A', minFloor: -2, maxFloor: 10 },
@@ -153,7 +153,7 @@ export async function initializeSampleData() {
 
         // Import API service dynamically to avoid circular dependencies
         const { elevatorAPI } = await import('../services/api');
-        
+
         // Create each elevator via the backend API
         for (const config of sampleConfigs) {
             try {
@@ -165,15 +165,15 @@ export async function initializeSampleData() {
                 // Continue with other elevators even if one fails
             }
         }
-        
+
         addNotification('Sample elevators created successfully!');
-        
+
         // Request current status from WebSocket to sync with backend
         const { wsService } = await import('../services/websocket');
         if (wsService.isConnected()) {
             wsService.requestStatus();
         }
-        
+
     } catch (error) {
         console.error('Failed to initialize sample data:', error);
         addNotification('Failed to create sample elevators. Please try again.');

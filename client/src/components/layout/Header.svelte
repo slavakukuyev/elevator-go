@@ -1,12 +1,19 @@
 <script lang="ts">
-	import { connectionStatus, theme, toggleTheme, showMonitoringPanel, showControlPanel, toggleControlPanel } from '../../stores/elevators';
+	import {
+		connectionStatus,
+		theme,
+		toggleTheme,
+		showMonitoringPanel,
+		showControlPanel,
+		toggleControlPanel,
+	} from '../../stores/elevators';
 
 	function handleThemeToggle() {
 		toggleTheme();
 	}
 
 	function toggleMonitoring() {
-		showMonitoringPanel.update(show => !show);
+		showMonitoringPanel.update((show) => !show);
 	}
 
 	function handleControlPanelToggle() {
@@ -14,14 +21,14 @@
 	}
 </script>
 
-<header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 lg:px-8">
+<header
+	class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 lg:px-8"
+>
 	<div class="flex items-center justify-between h-16">
 		<!-- Brand Identity -->
 		<div class="flex items-center">
 			<div class="flex-shrink-0">
-				<h1 class="text-xl font-bold text-gray-900 dark:text-white">
-					🏢 Elevator Control System
-				</h1>
+				<h1 class="text-xl font-bold text-gray-900 dark:text-white">🏢 Elevator Control System</h1>
 			</div>
 		</div>
 
@@ -29,7 +36,11 @@
 		<div class="flex items-center space-x-4">
 			<div class="flex items-center">
 				<div class="flex items-center space-x-2">
-					<div class="h-3 w-3 rounded-full {$connectionStatus.connected ? 'bg-green-500' : 'bg-red-500'} {$connectionStatus.connected ? 'animate-pulse' : ''}"></div>
+					<div
+						class="h-3 w-3 rounded-full {$connectionStatus.connected
+							? 'bg-green-500'
+							: 'bg-red-500'} {$connectionStatus.connected ? 'animate-pulse' : ''}"
+					/>
 					<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
 						{$connectionStatus.connected ? 'Connected' : 'Disconnected'}
 					</span>
@@ -47,22 +58,36 @@
 			<!-- Control Panel Toggle -->
 			<button
 				type="button"
-				class="control-panel-toggle text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors {$showControlPanel ? 'text-blue-600 dark:text-blue-400' : ''}"
+				class="control-panel-toggle text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors {$showControlPanel
+					? 'text-blue-600 dark:text-blue-400'
+					: ''}"
 				aria-label="Toggle control panel"
 				on:click={handleControlPanelToggle}
 			>
 				{#if $showControlPanel}
 					<!-- Show menu icon when panel is visible -->
 					<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M4 6h16M4 12h16M4 18h16"
+						/>
 					</svg>
 				{:else}
 					<!-- Show panel icon when panel is hidden -->
 					<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+						/>
 					</svg>
 				{/if}
-				<span class="tooltip">{$showControlPanel ? 'Hide Control Panel' : 'Show Control Panel'}</span>
+				<span class="tooltip"
+					>{$showControlPanel ? 'Hide Control Panel' : 'Show Control Panel'}</span
+				>
 			</button>
 
 			<!-- Monitoring Panel Toggle -->
@@ -73,9 +98,16 @@
 				on:click={toggleMonitoring}
 			>
 				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+					/>
 				</svg>
-				<span class="tooltip">{$showMonitoringPanel ? 'Hide Monitoring Panel' : 'Show Monitoring Panel'}</span>
+				<span class="tooltip"
+					>{$showMonitoringPanel ? 'Hide Monitoring Panel' : 'Show Monitoring Panel'}</span
+				>
 			</button>
 
 			<!-- Theme Toggle -->
@@ -88,12 +120,22 @@
 				{#if $theme.mode === 'dark'}
 					<!-- Sun Icon -->
 					<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+						/>
 					</svg>
 				{:else}
 					<!-- Moon Icon -->
 					<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+						/>
 					</svg>
 				{/if}
 			</button>
@@ -105,7 +147,12 @@
 				aria-label="Help"
 			>
 				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+					/>
 				</svg>
 			</button>
 		</div>
@@ -170,7 +217,7 @@
 		h1 {
 			font-size: 1.125rem;
 		}
-		
+
 		.space-x-4 {
 			gap: 0.5rem;
 		}
@@ -180,4 +227,4 @@
 			display: none;
 		}
 	}
-</style> 
+</style>
