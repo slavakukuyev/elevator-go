@@ -14,26 +14,10 @@
 		floorSelected: { from: number; to: number; elevatorName: string };
 	}>();
 
-	// Generate available floors from ALL elevators (excluding the current from floor)
-	$: availableFloors = (() => {
-		if ($elevators.length === 0) return [];
-
-		// Get all unique floors from all elevators
-		const allFloors = new Set<number>();
-
-		$elevators.forEach((elev) => {
-			if (elev.minFloor !== undefined && elev.maxFloor !== undefined) {
-				for (let floor = elev.minFloor; floor <= elev.maxFloor; floor++) {
-					allFloors.add(floor);
-				}
-			}
-		});
-
-		// Convert to array, sort, and exclude current floor
-		return Array.from(allFloors)
-			.sort((a, b) => a - b)
-			.filter((floor) => floor !== fromFloor);
-	})();
+	// Generate available floors that can be reached from the current floor (in descending order)
+	$: availableFloors = floorSelectionService
+		.getAvailableDestinations(fromFloor, $elevators)
+		.sort((a, b) => b - a); // Sort in descending order (higher to lower)
 
 	function formatFloor(floor: number): string {
 		return floorSelectionService.formatFloorDisplay(floor);
@@ -113,7 +97,7 @@
 					Available Destinations
 				</h3>
 				<p id="floor-selection-description" class="text-xs text-gray-600 dark:text-gray-400">
-					From {formatFloor(fromFloor)} (All elevators)
+					From {formatFloor(fromFloor)} (Reachable floors)
 				</p>
 			</div>
 
