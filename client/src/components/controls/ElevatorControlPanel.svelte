@@ -64,14 +64,6 @@
 		}
 	}
 
-	async function handleDirectFloorRequest() {
-		try {
-			await elevatorAPI.requestFloor(0, 5);
-		} catch (error) {
-			console.error('Failed to request floor 0 to 5:', error);
-		}
-	}
-
 	async function refreshStatus() {
 		try {
 			await elevatorAPI.syncElevatorStatus();
@@ -199,28 +191,6 @@
 							</Button>
 						{/each}
 					</div>
-				</div>
-
-				<!-- Direct Floor Request -->
-				<div class="space-y-2">
-					<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Direct Request</h4>
-					<Button
-						variant="primary"
-						size="medium"
-						fullWidth
-						on:click={handleDirectFloorRequest}
-						ariaLabel="Move elevator from floor 0 to floor 5"
-					>
-						<svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M7 11l5-5m0 0l5 5m-5-5v12"
-							/>
-						</svg>
-						Move 0→5
-					</Button>
 				</div>
 			</div>
 		{:else}

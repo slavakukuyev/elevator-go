@@ -1,8 +1,12 @@
 <script lang="ts">
 	import type { Elevator } from '../../types';
 	import { floorSelectionService } from '../../utils/floorSelection';
+	import FloorSelectionPopup from './FloorSelectionPopup.svelte';
 
 	export let elevator: Elevator;
+
+	let showFloorPopup = false;
+	let selectedFromFloor: number | null = null;
 
 	$: floorRange =
 		elevator.minFloor !== undefined && elevator.maxFloor !== undefined
@@ -69,6 +73,23 @@
 				return '';
 		}
 	}
+
+	function handleFloorIndicatorClick(floor: number) {
+		selectedFromFloor = floor;
+		showFloorPopup = true;
+	}
+
+	function handlePopupClose() {
+		showFloorPopup = false;
+		selectedFromFloor = null;
+	}
+
+	function handleFloorSelected(
+		event: CustomEvent<{ from: number; to: number; elevatorName: string }>
+	) {
+		const { from, to, elevatorName } = event.detail;
+		console.log(`Floor request: from ${from} to ${to} via ${elevatorName}`);
+	}
 </script>
 
 <div
@@ -104,14 +125,16 @@
 		<!-- Floor Indicators -->
 		<div class="absolute left-0 top-0 w-12" style="height: {totalHeight}px;">
 			{#each floorRange as floor}
-				<div
-					class="floor-indicator absolute w-full flex items-center justify-center h-[60px] text-xs font-medium {floor ===
+				<button
+					class="floor-indicator absolute w-full flex items-center justify-center h-[60px] text-xs font-medium cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors {floor ===
 					0
 						? 'text-yellow-600 dark:text-yellow-400 font-bold'
 						: floor === elevator.currentFloor
 						? 'text-green-600 dark:text-green-400 font-bold'
 						: 'text-gray-600 dark:text-gray-400'}"
 					style="top: {calculateElevatorPosition(floor, elevator.minFloor, elevator.maxFloor)}px;"
+					on:click={() => handleFloorIndicatorClick(floor)}
+					aria-label="Select floor {formatFloor(floor)} as destination"
 				>
 					{formatFloor(floor)}
 					{#if floor === 0}
@@ -123,7 +146,7 @@
 							class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-0.5 bg-green-500 dark:bg-green-400"
 						/>
 					{/if}
-				</div>
+				</button>
 			{/each}
 		</div>
 
@@ -207,6 +230,17 @@
 		</div>
 	</div>
 </div>
+
+<!-- Floor Selection Popup -->
+{#if showFloorPopup && selectedFromFloor !== null}
+	<FloorSelectionPopup
+		{elevator}
+		fromFloor={selectedFromFloor}
+		bind:isOpen={showFloorPopup}
+		on:close={handlePopupClose}
+		on:floorSelected={handleFloorSelected}
+	/>
+{/if}
 
 <style>
 	/* Elevator car animation */

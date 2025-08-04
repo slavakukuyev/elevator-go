@@ -16,7 +16,9 @@
 	<div class="flex-1 flex flex-col lg:flex-row">
 		<!-- Left Sidebar - Control Panel -->
 		{#if $showControlPanel}
-			<div class="w-full lg:w-80 xl:w-96 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-all duration-300 ease-in-out">
+			<div
+				class="w-full lg:w-80 xl:w-96 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-all duration-300 ease-in-out"
+			>
 				<ElevatorControlPanel />
 			</div>
 		{/if}
@@ -28,7 +30,9 @@
 
 		<!-- Right Sidebar - Monitoring Dashboard (collapsible) -->
 		{#if $showMonitoringPanel}
-			<div class="w-full lg:w-80 xl:w-96 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+			<div
+				class="w-full lg:w-80 xl:w-96 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+			>
 				<MonitoringDashboard />
 			</div>
 		{/if}
@@ -47,9 +51,9 @@
 		.flex-col {
 			flex-direction: column;
 		}
-		
+
 		.w-full.lg\:w-80 {
 			width: 100%;
 		}
 	}
-</style> 
+</style>
