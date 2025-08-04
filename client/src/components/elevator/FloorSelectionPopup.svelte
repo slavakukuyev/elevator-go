@@ -65,8 +65,9 @@
 		class="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center"
 		on:click={handleBackdropClick}
 		on:keydown={handleKeydown}
-		role="dialog"
+		role="button"
 		tabindex="-1"
+		aria-label="Close floor selection popup"
 	>
 		<!-- Popup Content -->
 		<div
