@@ -239,7 +239,7 @@ make debug-prepare       # Clean ports for IDE debugging
 ## Tech Stack Summary
 
 ### Backend
-- **Go 1.24+** (module: `github.com/slavakukuyev/elevator-go`)
+- **Go 1.25+** (module: `github.com/slavakukuyev/elevator-go`)
 - **gorilla/websocket** - WebSocket server
 - **prometheus/client_golang** - Metrics
 - **OpenTelemetry** - Distributed tracing

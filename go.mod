@@ -1,8 +1,6 @@
 module github.com/slavakukuyev/elevator-go
 
-go 1.23.0
-
-toolchain go1.24.4
+go 1.25
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
