@@ -22,10 +22,14 @@ func init() {
 	// Ensure BuildKit is enabled for testcontainers-go Docker builds
 	// This is critical for Dockerfiles using RUN --mount=type=cache
 	if os.Getenv("DOCKER_BUILDKIT") == "" {
-		os.Setenv("DOCKER_BUILDKIT", "1")
+		if err := os.Setenv("DOCKER_BUILDKIT", "1"); err != nil {
+			panic(fmt.Sprintf("failed to set DOCKER_BUILDKIT: %v", err))
+		}
 	}
 	if os.Getenv("BUILDKIT_PROGRESS") == "" {
-		os.Setenv("BUILDKIT_PROGRESS", "plain")
+		if err := os.Setenv("BUILDKIT_PROGRESS", "plain"); err != nil {
+			panic(fmt.Sprintf("failed to set BUILDKIT_PROGRESS: %v", err))
+		}
 	}
 }
 
@@ -33,7 +37,9 @@ func init() {
 func ensureBuildKitEnabled(t *testing.T) {
 	if os.Getenv("DOCKER_BUILDKIT") == "" {
 		t.Logf("⚠️ DOCKER_BUILDKIT not set, setting to 1 for testcontainers")
-		os.Setenv("DOCKER_BUILDKIT", "1")
+		if err := os.Setenv("DOCKER_BUILDKIT", "1"); err != nil {
+			t.Fatalf("failed to set DOCKER_BUILDKIT: %v", err)
+		}
 	}
 	t.Logf("✓ BuildKit environment: DOCKER_BUILDKIT=%s, BUILDKIT_PROGRESS=%s",
 		os.Getenv("DOCKER_BUILDKIT"), os.Getenv("BUILDKIT_PROGRESS"))
