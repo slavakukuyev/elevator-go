@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -17,6 +18,27 @@ import (
 	httpPkg "github.com/slavakukuyev/elevator-go/internal/http"
 )
 
+func init() {
+	// Ensure BuildKit is enabled for testcontainers-go Docker builds
+	// This is critical for Dockerfiles using RUN --mount=type=cache
+	if os.Getenv("DOCKER_BUILDKIT") == "" {
+		os.Setenv("DOCKER_BUILDKIT", "1")
+	}
+	if os.Getenv("BUILDKIT_PROGRESS") == "" {
+		os.Setenv("BUILDKIT_PROGRESS", "plain")
+	}
+}
+
+// ensureBuildKitEnabled verifies BuildKit is available for testcontainers builds
+func ensureBuildKitEnabled(t *testing.T) {
+	if os.Getenv("DOCKER_BUILDKIT") == "" {
+		t.Logf("⚠️ DOCKER_BUILDKIT not set, setting to 1 for testcontainers")
+		os.Setenv("DOCKER_BUILDKIT", "1")
+	}
+	t.Logf("✓ BuildKit environment: DOCKER_BUILDKIT=%s, BUILDKIT_PROGRESS=%s",
+		os.Getenv("DOCKER_BUILDKIT"), os.Getenv("BUILDKIT_PROGRESS"))
+}
+
 // TestElevatorServiceIntegration tests the elevator service running in a Docker container.
 // This integration test verifies the complete elevator system functionality in an isolated
 // containerized environment, ensuring the service works correctly end-to-end.
@@ -25,6 +47,8 @@ func TestElevatorServiceIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping testcontainers test in short mode")
 	}
+
+	ensureBuildKitEnabled(t)
 
 	// Create context with timeout for the entire test (5 minutes total)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -307,6 +331,8 @@ func TestContainerizedSystemWorkflow(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping comprehensive workflow test in short mode")
 	}
+
+	ensureBuildKitEnabled(t)
 
 	// Create context with timeout for the entire test (5 minutes total)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)

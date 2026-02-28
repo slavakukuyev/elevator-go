@@ -129,6 +129,7 @@ jobs:
 
     env:
       DOCKER_BUILDKIT: 1
+      BUILDKIT_PROGRESS: plain
 
     steps:
     - name: Checkout code
@@ -140,6 +141,21 @@ jobs:
         install: true
         driver-opts: |
           image=moby/buildkit:latest
+
+    - name: Enable BuildKit on Docker daemon
+      run: |
+        # Create docker buildkit config
+        mkdir -p ~/.docker
+        echo '{"features": {"buildkit": true}}' | sudo tee /etc/docker/daemon.json > /dev/null
+
+        # Reload docker daemon to apply BuildKit setting
+        sudo systemctl restart docker
+
+        # Wait for docker to be ready
+        timeout 30 sh -c 'until docker info > /dev/null 2>&1; do sleep 1; done'
+
+        # Verify BuildKit is enabled
+        docker info | grep -i buildkit || echo "BuildKit status check"
 
     - name: Set up Go
       uses: actions/setup-go@v5
