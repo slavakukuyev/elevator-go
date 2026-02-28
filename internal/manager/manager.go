@@ -120,6 +120,106 @@ func (m *Manager) GetElevators() []*elevator.Elevator {
 	return elevators
 }
 
+// DeleteElevator safely removes an elevator from the system
+// It marks the elevator for deletion, waits for current requests to finish, then removes it
+func (m *Manager) DeleteElevator(ctx context.Context, name string) error {
+	// Create a timeout context for elevator deletion using configuration
+	deleteCtx, cancel := context.WithTimeout(ctx, m.cfg.CreateElevatorTimeout) // Reuse elevator creation timeout for deletion
+	defer cancel()
+
+	// Find and mark the elevator for deletion
+	elevator := m.GetElevator(name)
+	if elevator == nil {
+		err := domain.NewNotFoundError("elevator not found", nil).
+			WithContext("name", name)
+		m.logger.ErrorContext(deleteCtx, "failed to delete elevator: not found",
+			slog.String("name", name),
+			slog.String("error", err.Error()))
+		return err
+	}
+
+	// Check if elevator is already marked for deletion
+	if elevator.IsMarkedForDeletion() {
+		err := domain.NewValidationError("elevator is already being deleted", nil).
+			WithContext("name", name)
+		m.logger.WarnContext(deleteCtx, "elevator deletion already in progress",
+			slog.String("name", name))
+		return err
+	}
+
+	// Mark elevator for deletion (no new requests will be accepted)
+	elevator.MarkForDeletion()
+
+	m.logger.InfoContext(deleteCtx, "elevator marked for deletion, waiting for pending requests to complete",
+		slog.String("elevator", name),
+		slog.Bool("has_pending_requests", elevator.HasPendingRequests()))
+
+	// Wait for pending requests to finish with timeout
+	if err := m.waitForElevatorToFinish(deleteCtx, elevator); err != nil {
+		m.logger.ErrorContext(deleteCtx, "timeout waiting for elevator to finish pending requests",
+			slog.String("elevator", name),
+			slog.String("error", err.Error()))
+		return domain.NewInternalError("timeout waiting for elevator to complete pending requests", err).
+			WithContext("name", name)
+	}
+
+	// Remove elevator from the manager's list
+	if err := m.removeElevatorFromList(name); err != nil {
+		m.logger.ErrorContext(deleteCtx, "failed to remove elevator from manager list",
+			slog.String("elevator", name),
+			slog.String("error", err.Error()))
+		return err
+	}
+
+	// Shutdown the elevator gracefully
+	elevator.Shutdown()
+
+	m.logger.InfoContext(deleteCtx, "elevator successfully deleted",
+		slog.String("elevator", name))
+
+	return nil
+}
+
+// waitForElevatorToFinish waits for an elevator to complete all pending requests
+func (m *Manager) waitForElevatorToFinish(ctx context.Context, elevator *elevator.Elevator) error {
+	// Check every 100ms if the elevator has finished all requests
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			if !elevator.HasPendingRequests() {
+				return nil
+			}
+			// Log progress
+			m.logger.DebugContext(ctx, "waiting for elevator to finish pending requests",
+				slog.String("elevator", elevator.Name()),
+				slog.Bool("has_pending_requests", elevator.HasPendingRequests()))
+		}
+	}
+}
+
+// removeElevatorFromList safely removes an elevator from the manager's elevator slice
+func (m *Manager) removeElevatorFromList(name string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for i, e := range m.elevators {
+		if e.Name() == name {
+			// Remove elevator from slice
+			m.elevators = append(m.elevators[:i], m.elevators[i+1:]...)
+			return nil
+		}
+	}
+
+	// This should not happen if we found the elevator earlier, but handle it gracefully
+	return domain.NewInternalError("elevator not found in manager list during removal", nil).
+		WithContext("name", name)
+}
+
 func (m *Manager) RequestElevator(ctx context.Context, fromFloor, toFloor int) (*elevator.Elevator, error) {
 	start := time.Now()
 
@@ -167,6 +267,12 @@ func (m *Manager) RequestElevator(ctx context.Context, fromFloor, toFloor int) (
 		el = elevators[0]
 		if !el.IsRequestInRange(fromFloorDomain, toFloorDomain) {
 			return nil, domain.NewValidationError("requested floors out of range for the elevator", nil).
+				WithContext("fromFloor", fromFloor).
+				WithContext("toFloor", toFloor)
+		}
+		// Skip elevator if it's marked for deletion
+		if el.IsMarkedForDeletion() {
+			return nil, domain.NewValidationError("elevator is being deleted and cannot accept new requests", nil).
 				WithContext("fromFloor", fromFloor).
 				WithContext("toFloor", toFloor)
 		}
@@ -245,6 +351,11 @@ func (m *Manager) RequestElevator(ctx context.Context, fromFloor, toFloor int) (
 
 func requestedElevator(elevators []*elevator.Elevator, direction domain.Direction, fromFloor, toFloor domain.Floor) *elevator.Elevator {
 	for _, e := range elevators {
+		// Skip elevators marked for deletion
+		if e.IsMarkedForDeletion() {
+			continue
+		}
+
 		if e.Directions().IsRequestExisting(direction, fromFloor, toFloor) {
 			return e
 		}
@@ -286,6 +397,11 @@ func (m *Manager) chooseElevator(elevators []*elevator.Elevator, requestedDirect
 	// case when elevator is waiting to start
 	for _, e := range elevators {
 		if !e.IsRequestInRange(fromFloor, toFloor) {
+			continue
+		}
+
+		// Skip elevators marked for deletion
+		if e.IsMarkedForDeletion() {
 			continue
 		}
 
@@ -444,6 +560,11 @@ func findNearestElevator(elevatorsWaiting map[*elevator.Elevator]domain.Floor, r
 			continue
 		}
 
+		// Skip elevators marked for deletion
+		if e.IsMarkedForDeletion() {
+			continue
+		}
+
 		diff := floorsDiff(floor, requestedFloor)
 		if first || (smallest > diff) {
 			smallest = diff
@@ -463,6 +584,11 @@ func elevatorWithMinRequestsByDirection(elevators []*elevator.Elevator, directio
 	for _, e := range elevators {
 		// Skip overloaded elevators
 		if isElevatorOverloaded(e) {
+			continue
+		}
+
+		// Skip elevators marked for deletion
+		if e.IsMarkedForDeletion() {
 			continue
 		}
 

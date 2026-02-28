@@ -574,6 +574,29 @@ func (e *Elevator) GetStatus() domain.ElevatorStatus {
 	return e.state.GetStatus(requestCount)
 }
 
+// MarkForDeletion marks the elevator for deletion by setting its direction to deleting
+// This prevents new requests from being accepted while allowing current ones to finish
+func (e *Elevator) MarkForDeletion() {
+	e.state.SetDirection(domain.DirectionDeleting)
+	e.logger.Info("elevator marked for deletion",
+		slog.String("elevator", e.Name()))
+}
+
+// IsMarkedForDeletion returns true if the elevator is marked for deletion
+func (e *Elevator) IsMarkedForDeletion() bool {
+	return e.CurrentDirection() == domain.DirectionDeleting
+}
+
+// CanAcceptRequests returns true if the elevator can accept new requests
+func (e *Elevator) CanAcceptRequests() bool {
+	return e.CurrentDirection().IsOperational()
+}
+
+// HasPendingRequests returns true if the elevator has pending requests
+func (e *Elevator) HasPendingRequests() bool {
+	return e.directionsManager.DirectionsLength() > 0
+}
+
 // GetHealthMetrics returns health metrics including circuit breaker status
 func (e *Elevator) GetHealthMetrics() map[string]interface{} {
 	state, failures, successes := e.circuitBreaker.GetMetrics()
@@ -586,7 +609,8 @@ func (e *Elevator) GetHealthMetrics() map[string]interface{} {
 		"circuit_breaker_state":     e.getCircuitBreakerStateName(state),
 		"circuit_breaker_failures":  failures,
 		"circuit_breaker_successes": successes,
-		"is_healthy":                state != StateOpen,
+		"is_healthy":                state != StateOpen && !e.IsMarkedForDeletion(),
+		"is_deleting":               e.IsMarkedForDeletion(),
 		"min_floor":                 e.state.MinFloor().Value(),
 		"max_floor":                 e.state.MaxFloor().Value(),
 	}
