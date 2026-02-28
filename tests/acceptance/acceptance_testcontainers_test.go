@@ -283,7 +283,7 @@ func TestElevatorServiceIntegration(t *testing.T) {
 			}
 
 			// Wait for all requests to complete
-			for i := 0; i < len(requests); i++ {
+			for range len(requests) {
 				err := <-results
 				assert.NoError(t, err)
 			}

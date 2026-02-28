@@ -111,7 +111,16 @@ func NewServer(cfg *config.Config, port int, manager *manager.Manager) *Server {
 	// === V1 API ROUTES (New versioned API) ===
 	mux.HandleFunc("/v1", v1Handlers.APIInfoHandler)
 	mux.HandleFunc("/v1/floors/request", v1Handlers.FloorRequestHandler)
-	mux.HandleFunc("/v1/elevators", v1Handlers.ElevatorCreateHandler)
+	mux.HandleFunc("/v1/elevators", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			v1Handlers.ElevatorCreateHandler(w, r)
+		case http.MethodDelete:
+			v1Handlers.ElevatorDeleteHandler(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
 	mux.HandleFunc("/v1/health", v1Handlers.HealthHandler)
 	mux.HandleFunc("/v1/metrics", v1Handlers.MetricsHandler)
 

@@ -8,6 +8,7 @@ type ElevatorStatus struct {
 	Requests     int       `json:"requests"`
 	MinFloor     Floor     `json:"min_floor"`
 	MaxFloor     Floor     `json:"max_floor"`
+	IsDeleting   bool      `json:"is_deleting"`
 }
 
 // NewElevatorStatus creates a new elevator status
@@ -19,6 +20,7 @@ func NewElevatorStatus(name string, currentFloor Floor, direction Direction, req
 		Requests:     requests,
 		MinFloor:     minFloor,
 		MaxFloor:     maxFloor,
+		IsDeleting:   direction == DirectionDeleting,
 	}
 }
 
@@ -45,4 +47,14 @@ func (es ElevatorStatus) IsAtBottomFloor() bool {
 // CanServeFloor returns true if the elevator can serve the given floor
 func (es ElevatorStatus) CanServeFloor(floor Floor) bool {
 	return floor.IsValid(es.MinFloor, es.MaxFloor)
+}
+
+// CanAcceptNewRequests returns true if the elevator can accept new requests
+func (es ElevatorStatus) CanAcceptNewRequests() bool {
+	return !es.IsDeleting && es.Direction.IsOperational()
+}
+
+// IsDeleting returns true if the elevator is being deleted
+func (es ElevatorStatus) IsBeingDeleted() bool {
+	return es.IsDeleting
 }
