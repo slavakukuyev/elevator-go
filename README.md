@@ -106,7 +106,7 @@ A Go-based elevator control system with real-time WebSocket updates and Svelte f
 ### 🔧 Technical Stack
 
 #### Backend
-- **Go 1.24+** with Go modules
+- **Go 1.25+** with Go modules
 - **HTTP/WebSocket** servers on ports 6660/6661
 - **Prometheus** metrics collection
 - **OpenTelemetry** for distributed tracing
@@ -127,7 +127,7 @@ A Go-based elevator control system with real-time WebSocket updates and Svelte f
 ## Quick Start
 
 ### Prerequisites
-- Go 1.24+
+- Go 1.25+
 - Node.js 18+ (for frontend)
 - Docker (optional)
 
