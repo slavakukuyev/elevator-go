@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Stage 1: Build the Go binary
 FROM golang:1.25-alpine3.21 AS builder
 
