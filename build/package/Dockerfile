@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # Stage 1: Build the Go binary
 FROM golang:1.25-alpine3.21 AS builder
 
@@ -12,13 +11,12 @@ WORKDIR /app
 # Copy go.mod and go.sum files first for better caching
 COPY go.mod go.sum ./
 
-# Download all dependencies with optimized settings for faster builds
-# Use Go proxy for faster dependency resolution in CI
-ENV GOPROXY=https://proxy.golang.org,direct
-ENV GOSUMDB=sum.golang.org
-ENV CGO_ENABLED=0
-RUN --mount=type=cache,target=/go/pkg/mod \
-    go mod download
+# Download all dependencies
+# Configure Git to handle SSL certificate issues
+RUN git config --global http.sslVerify false
+ENV GOPROXY=direct
+ENV GOSUMDB=off
+RUN go mod download
 
 # Copy only necessary source files
 COPY cmd/ cmd/
@@ -26,10 +24,8 @@ COPY internal/ internal/
 COPY metrics/ metrics/
 COPY configs/production.env configs/
 
-# Build the Go app with optimization flags and build cache
-RUN --mount=type=cache,target=/root/.cache/go-build \
-    --mount=type=cache,target=/go/pkg/mod \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+# Build the Go app with optimization flags
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags='-w -s -extldflags "-static"' \
     -a -installsuffix cgo \
     -o /app/out/elevator-go \

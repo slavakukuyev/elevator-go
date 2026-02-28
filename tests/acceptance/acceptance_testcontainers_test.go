@@ -6,11 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	testcontainers "github.com/testcontainers/testcontainers-go"
@@ -18,33 +16,6 @@ import (
 
 	httpPkg "github.com/slavakukuyev/elevator-go/internal/http"
 )
-
-func init() {
-	// Ensure BuildKit is enabled for testcontainers-go Docker builds
-	// This is critical for Dockerfiles using RUN --mount=type=cache
-	if os.Getenv("DOCKER_BUILDKIT") == "" {
-		if err := os.Setenv("DOCKER_BUILDKIT", "1"); err != nil {
-			panic(fmt.Sprintf("failed to set DOCKER_BUILDKIT: %v", err))
-		}
-	}
-	if os.Getenv("BUILDKIT_PROGRESS") == "" {
-		if err := os.Setenv("BUILDKIT_PROGRESS", "plain"); err != nil {
-			panic(fmt.Sprintf("failed to set BUILDKIT_PROGRESS: %v", err))
-		}
-	}
-}
-
-// ensureBuildKitEnabled verifies BuildKit is available for testcontainers builds
-func ensureBuildKitEnabled(t *testing.T) {
-	if os.Getenv("DOCKER_BUILDKIT") == "" {
-		t.Logf("⚠️ DOCKER_BUILDKIT not set, setting to 1 for testcontainers")
-		if err := os.Setenv("DOCKER_BUILDKIT", "1"); err != nil {
-			t.Fatalf("failed to set DOCKER_BUILDKIT: %v", err)
-		}
-	}
-	t.Logf("✓ BuildKit environment: DOCKER_BUILDKIT=%s, BUILDKIT_PROGRESS=%s",
-		os.Getenv("DOCKER_BUILDKIT"), os.Getenv("BUILDKIT_PROGRESS"))
-}
 
 // TestElevatorServiceIntegration tests the elevator service running in a Docker container.
 // This integration test verifies the complete elevator system functionality in an isolated
@@ -55,24 +26,14 @@ func TestElevatorServiceIntegration(t *testing.T) {
 		t.Skip("Skipping testcontainers test in short mode")
 	}
 
-	ensureBuildKitEnabled(t)
-
-	// Create context with timeout for the entire test (5 minutes total)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
+	ctx := context.Background()
 
 	// Build and start the elevator service container
 	t.Logf("🚀 Starting elevator service container build...")
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
-			Context:       "../..", // Go up two levels to project root
-			Dockerfile:    "build/package/Dockerfile",
-			PrintBuildLog: true, // Enable build logging for debugging CI issues
-			BuildOptionsModifier: func(opts *types.ImageBuildOptions) {
-				// Enable BuildKit explicitly via API (required for --mount=type=cache)
-				// This is the programmatic way to enable BuildKit for testcontainers-go
-				opts.Version = types.BuilderBuildKit
-			},
+			Context:    "../..", // Go up two levels to project root
+			Dockerfile: "build/package/Dockerfile",
 		},
 		ExposedPorts: []string{"6660/tcp"},
 		Env: map[string]string{
@@ -106,14 +67,11 @@ func TestElevatorServiceIntegration(t *testing.T) {
 	}
 	t.Logf("✅ Container started successfully!")
 	defer func() {
-		// Use background context for cleanup to avoid context cancellation issues
-		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cleanupCancel()
-		if logs, logErr := elevatorContainer.Logs(cleanupCtx); logErr == nil {
+		if logs, logErr := elevatorContainer.Logs(ctx); logErr == nil {
 			t.Logf("Container logs available for debugging")
 			_ = logs
 		}
-		_ = elevatorContainer.Terminate(cleanupCtx)
+		_ = elevatorContainer.Terminate(ctx)
 	}()
 
 	// Get container endpoint
@@ -344,24 +302,14 @@ func TestContainerizedSystemWorkflow(t *testing.T) {
 		t.Skip("Skipping comprehensive workflow test in short mode")
 	}
 
-	ensureBuildKitEnabled(t)
-
-	// Create context with timeout for the entire test (5 minutes total)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
+	ctx := context.Background()
 
 	// Start the elevator service with production-like configuration
 	t.Logf("🚀 Starting elevator service container for workflow test...")
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
-			Context:       "../..",
-			Dockerfile:    "build/package/Dockerfile",
-			BuildArgs:     map[string]*string{},
-			PrintBuildLog: true, // Enable build logging for debugging CI issues
-			BuildOptionsModifier: func(opts *types.ImageBuildOptions) {
-				// Enable BuildKit explicitly via API (required for --mount=type=cache)
-				opts.Version = types.BuilderBuildKit
-			},
+			Context:    "../..",
+			Dockerfile: "build/package/Dockerfile",
 		},
 		ExposedPorts: []string{"6660/tcp"},
 		Env: map[string]string{
@@ -378,29 +326,16 @@ func TestContainerizedSystemWorkflow(t *testing.T) {
 		},
 		WaitingFor: wait.ForHTTP("/v1/health/live").
 			WithPort("6660/tcp").
-			WithStartupTimeout(120 * time.Second). // Increased timeout for CI
-			WithPollInterval(2 * time.Second),
+			WithStartupTimeout(120 * time.Second), // Increased timeout
 	}
 
-	t.Logf("⏳ Building Docker image (this may take 3-4 minutes in CI)...")
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
 		Started:          true,
 	})
-	if err != nil {
-		t.Logf("❌ Container creation failed: %v", err)
-		require.NoError(t, err)
-	}
-	t.Logf("✅ Container started successfully!")
+	require.NoError(t, err)
 	defer func() {
-		// Use background context for cleanup to avoid context cancellation issues
-		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cleanupCancel()
-		if logs, logErr := container.Logs(cleanupCtx); logErr == nil {
-			t.Logf("Container logs available for debugging")
-			_ = logs
-		}
-		_ = container.Terminate(cleanupCtx)
+		_ = container.Terminate(ctx)
 	}()
 
 	host, err := container.Host(ctx)
@@ -535,9 +470,7 @@ func TestWithTestcontainers(t *testing.T) {
 		t.Skip("Skipping testcontainers example in short mode")
 	}
 
-	// Create context with timeout (1 minute for simple nginx test)
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
+	ctx := context.Background()
 
 	// Example: Start an nginx container to demonstrate the pattern
 	req := testcontainers.ContainerRequest{
@@ -552,10 +485,7 @@ func TestWithTestcontainers(t *testing.T) {
 	})
 	require.NoError(t, err)
 	defer func() {
-		// Use background context for cleanup
-		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cleanupCancel()
-		_ = nginxContainer.Terminate(cleanupCtx)
+		_ = nginxContainer.Terminate(ctx)
 	}()
 
 	// Get the container endpoint
