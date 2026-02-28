@@ -126,21 +126,23 @@ jobs:
     name: Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
         go-version: ${{ env.GO_VERSION }}
         cache: true
-        
+
     - name: Run acceptance tests
       run: make test/acceptance
-        
+
     - name: Run integration tests with testcontainers
+      env:
+        DOCKER_BUILDKIT: 1
       run: make test/integration
 
   # Build job - runs only after all tests pass
@@ -162,8 +164,10 @@ jobs:
         
     - name: Build binary
       run: make build
-        
+
     - name: Build Docker image
+      env:
+        DOCKER_BUILDKIT: 1
       run: make docker/build
         
     - name: Cleanup Docker resources
