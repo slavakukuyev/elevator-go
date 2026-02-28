@@ -26,14 +26,17 @@ func TestElevatorServiceIntegration(t *testing.T) {
 		t.Skip("Skipping testcontainers test in short mode")
 	}
 
-	ctx := context.Background()
+	// Create context with timeout for the entire test (5 minutes total)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
 	// Build and start the elevator service container
 	t.Logf("🚀 Starting elevator service container build...")
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
-			Context:    "../..", // Go up two levels to project root
-			Dockerfile: "build/package/Dockerfile",
+			Context:       "../..", // Go up two levels to project root
+			Dockerfile:    "build/package/Dockerfile",
+			PrintBuildLog: true, // Enable build logging for debugging CI issues
 		},
 		ExposedPorts: []string{"6660/tcp"},
 		Env: map[string]string{
@@ -67,11 +70,14 @@ func TestElevatorServiceIntegration(t *testing.T) {
 	}
 	t.Logf("✅ Container started successfully!")
 	defer func() {
-		if logs, logErr := elevatorContainer.Logs(ctx); logErr == nil {
+		// Use background context for cleanup to avoid context cancellation issues
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cleanupCancel()
+		if logs, logErr := elevatorContainer.Logs(cleanupCtx); logErr == nil {
 			t.Logf("Container logs available for debugging")
 			_ = logs
 		}
-		_ = elevatorContainer.Terminate(ctx)
+		_ = elevatorContainer.Terminate(cleanupCtx)
 	}()
 
 	// Get container endpoint
@@ -283,7 +289,7 @@ func TestElevatorServiceIntegration(t *testing.T) {
 			}
 
 			// Wait for all requests to complete
-			for i := 0; i < len(requests); i++ {
+			for range len(requests) {
 				err := <-results
 				assert.NoError(t, err)
 			}
@@ -302,14 +308,18 @@ func TestContainerizedSystemWorkflow(t *testing.T) {
 		t.Skip("Skipping comprehensive workflow test in short mode")
 	}
 
-	ctx := context.Background()
+	// Create context with timeout for the entire test (5 minutes total)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
 	// Start the elevator service with production-like configuration
 	t.Logf("🚀 Starting elevator service container for workflow test...")
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
-			Context:    "../..",
-			Dockerfile: "build/package/Dockerfile",
+			Context:       "../..",
+			Dockerfile:    "build/package/Dockerfile",
+			BuildArgs:     map[string]*string{},
+			PrintBuildLog: true, // Enable build logging for debugging CI issues
 		},
 		ExposedPorts: []string{"6660/tcp"},
 		Env: map[string]string{
@@ -326,16 +336,29 @@ func TestContainerizedSystemWorkflow(t *testing.T) {
 		},
 		WaitingFor: wait.ForHTTP("/v1/health/live").
 			WithPort("6660/tcp").
-			WithStartupTimeout(120 * time.Second), // Increased timeout
+			WithStartupTimeout(120 * time.Second). // Increased timeout for CI
+			WithPollInterval(2 * time.Second),
 	}
 
+	t.Logf("⏳ Building Docker image (this may take 3-4 minutes in CI)...")
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
 		Started:          true,
 	})
-	require.NoError(t, err)
+	if err != nil {
+		t.Logf("❌ Container creation failed: %v", err)
+		require.NoError(t, err)
+	}
+	t.Logf("✅ Container started successfully!")
 	defer func() {
-		_ = container.Terminate(ctx)
+		// Use background context for cleanup to avoid context cancellation issues
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cleanupCancel()
+		if logs, logErr := container.Logs(cleanupCtx); logErr == nil {
+			t.Logf("Container logs available for debugging")
+			_ = logs
+		}
+		_ = container.Terminate(cleanupCtx)
 	}()
 
 	host, err := container.Host(ctx)
@@ -470,7 +493,9 @@ func TestWithTestcontainers(t *testing.T) {
 		t.Skip("Skipping testcontainers example in short mode")
 	}
 
-	ctx := context.Background()
+	// Create context with timeout (1 minute for simple nginx test)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
 
 	// Example: Start an nginx container to demonstrate the pattern
 	req := testcontainers.ContainerRequest{
@@ -485,7 +510,10 @@ func TestWithTestcontainers(t *testing.T) {
 	})
 	require.NoError(t, err)
 	defer func() {
-		_ = nginxContainer.Terminate(ctx)
+		// Use background context for cleanup
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cleanupCancel()
+		_ = nginxContainer.Terminate(cleanupCtx)
 	}()
 
 	// Get the container endpoint
