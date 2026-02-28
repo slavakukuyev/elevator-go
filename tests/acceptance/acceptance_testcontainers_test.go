@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	testcontainers "github.com/testcontainers/testcontainers-go"
@@ -67,6 +68,11 @@ func TestElevatorServiceIntegration(t *testing.T) {
 			Context:       "../..", // Go up two levels to project root
 			Dockerfile:    "build/package/Dockerfile",
 			PrintBuildLog: true, // Enable build logging for debugging CI issues
+			BuildOptionsModifier: func(opts *types.ImageBuildOptions) {
+				// Enable BuildKit explicitly via API (required for --mount=type=cache)
+				// This is the programmatic way to enable BuildKit for testcontainers-go
+				opts.Version = types.BuilderBuildKit
+			},
 		},
 		ExposedPorts: []string{"6660/tcp"},
 		Env: map[string]string{
@@ -352,6 +358,10 @@ func TestContainerizedSystemWorkflow(t *testing.T) {
 			Dockerfile:    "build/package/Dockerfile",
 			BuildArgs:     map[string]*string{},
 			PrintBuildLog: true, // Enable build logging for debugging CI issues
+			BuildOptionsModifier: func(opts *types.ImageBuildOptions) {
+				// Enable BuildKit explicitly via API (required for --mount=type=cache)
+				opts.Version = types.BuilderBuildKit
+			},
 		},
 		ExposedPorts: []string{"6660/tcp"},
 		Env: map[string]string{
