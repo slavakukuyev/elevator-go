@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 env:
-  GO_VERSION: '1.24'
+  GO_VERSION: '1.25'
 
 jobs:
   # Linting job - runs simultaneously with tests
@@ -29,7 +29,7 @@ jobs:
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v7
       with:
-        version: v2.3.0
+        version: v2.10.1
         args: --timeout=5m
 
   # Unit tests job - runs simultaneously with other tests
