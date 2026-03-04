@@ -358,7 +358,7 @@ func (suite *AcceptanceTestSuite) TestEdgeCasesAndErrorHandling() {
 		}{
 			{"empty name", "", 0, 10, http.StatusBadRequest},
 			{"same min/max floor", "SameFloor", 5, 5, http.StatusBadRequest},
-			{"duplicate name", "TestElevator", 0, 15, http.StatusBadRequest},
+			{"duplicate name", "TestElevator", 0, 15, http.StatusConflict},
 		}
 
 		for _, tc := range testCases {
