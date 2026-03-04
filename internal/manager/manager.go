@@ -127,9 +127,18 @@ func (m *Manager) DeleteElevator(ctx context.Context, name string) error {
 	deleteCtx, cancel := context.WithTimeout(ctx, m.cfg.CreateElevatorTimeout) // Reuse elevator creation timeout for deletion
 	defer cancel()
 
-	// Find and mark the elevator for deletion
-	elevator := m.GetElevator(name)
+	// Find and mark the elevator for deletion atomically to prevent TOCTOU race
+	m.mu.Lock()
+	var elevator *elevator.Elevator
+	for _, e := range m.elevators {
+		if e.Name() == name {
+			elevator = e
+			break
+		}
+	}
+
 	if elevator == nil {
+		m.mu.Unlock()
 		err := domain.NewNotFoundError("elevator not found", nil).
 			WithContext("name", name)
 		m.logger.ErrorContext(deleteCtx, "failed to delete elevator: not found",
@@ -140,6 +149,7 @@ func (m *Manager) DeleteElevator(ctx context.Context, name string) error {
 
 	// Check if elevator is already marked for deletion
 	if elevator.IsMarkedForDeletion() {
+		m.mu.Unlock()
 		err := domain.NewValidationError("elevator is already being deleted", nil).
 			WithContext("name", name)
 		m.logger.WarnContext(deleteCtx, "elevator deletion already in progress",
@@ -149,6 +159,7 @@ func (m *Manager) DeleteElevator(ctx context.Context, name string) error {
 
 	// Mark elevator for deletion (no new requests will be accepted)
 	elevator.MarkForDeletion()
+	m.mu.Unlock()
 
 	m.logger.InfoContext(deleteCtx, "elevator marked for deletion, waiting for pending requests to complete",
 		slog.String("elevator", name),
