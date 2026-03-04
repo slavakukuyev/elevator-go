@@ -2,6 +2,7 @@
 	import type { Elevator } from '../../types';
 	import { floorSelectionService } from '../../utils/floorSelection';
 	import FloorSelectionPopup from './FloorSelectionPopup.svelte';
+	import { elevatorAPI } from '../../services/api';
 
 	export let elevator: Elevator;
 
@@ -84,11 +85,36 @@
 		selectedFromFloor = null;
 	}
 
-	function handleFloorSelected(
+	async function handleFloorSelected(
 		event: CustomEvent<{ from: number; to: number; elevatorName: string }>
 	) {
 		const { from, to, elevatorName } = event.detail;
 		console.log(`Floor request: from ${from} to ${to} via ${elevatorName}`);
+
+		// Import the API service and request the floor
+		const { elevatorAPI } = await import('../../services/api');
+		try {
+			await elevatorAPI.requestFloor(from, to);
+			// Close the popup after successful request
+			handlePopupClose();
+		} catch (error) {
+			console.error('Failed to request floor:', error);
+			// The API service will handle the notification
+		}
+	}
+
+	async function handleDeleteElevator() {
+		if (!confirm(`Are you sure you want to delete elevator ${elevator.name}?`)) {
+			return;
+		}
+
+		try {
+			await elevatorAPI.deleteElevator(elevator.name);
+			// Don't remove from store immediately - let WebSocket updates handle it
+			// The elevator will be removed once the backend completes deletion
+		} catch (error) {
+			console.error('Failed to delete elevator:', error);
+		}
 	}
 </script>
 
@@ -99,12 +125,30 @@
 >
 	<!-- Elevator Header -->
 	<div class="mb-4">
-		<h3
-			id="elevator-{elevator.name}-title"
-			class="text-lg font-semibold text-gray-900 dark:text-white"
-		>
-			{elevator.name}
-		</h3>
+		<div class="flex items-center justify-between">
+			<h3
+				id="elevator-{elevator.name}-title"
+				class="text-lg font-semibold text-gray-900 dark:text-white"
+			>
+				{elevator.name}
+			</h3>
+			{#if !elevator.isDeleting}
+				<button
+					type="button"
+					class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+					aria-label="Delete elevator {elevator.name}"
+					title="Delete elevator"
+					on:click={handleDeleteElevator}
+				>
+					<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+							d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+					</svg>
+				</button>
+			{:else}
+				<span class="text-sm text-yellow-600 dark:text-yellow-400">Deleting...</span>
+			{/if}
+		</div>
 		<div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mt-1">
 			<span>Floors {elevator.minFloor ?? '?'} - {elevator.maxFloor ?? '?'}</span>
 			<div class="flex items-center space-x-2">

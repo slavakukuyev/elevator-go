@@ -4,11 +4,12 @@ export interface Elevator {
     minFloor: number;
     maxFloor: number;
     currentFloor: number;
-    status: 'idle' | 'moving' | 'error';
+    status: 'idle' | 'moving' | 'error' | 'deleting';
     direction: 'up' | 'down' | null;
     doorsOpen: boolean;
     hasPassenger: boolean;
     threshold?: number;
+    isDeleting?: boolean;
 }
 
 export interface SystemStatus {
@@ -102,4 +103,11 @@ export interface APIError {
     requestId: string;
     timestamp: string;
     rawError?: string;
+}
+
+export interface Notification {
+    id: string;
+    message: string;
+    type: 'info' | 'success' | 'error' | 'warning';
+    duration?: number; // milliseconds, default 5000
 } 

@@ -12,7 +12,7 @@ export class FloorSelectionService {
         // Find elevators that can serve the current floor
         const servingElevators = elevators.filter(elev =>
             currentFloor >= elev.minFloor && currentFloor <= elev.maxFloor &&
-            elev.status !== 'error'
+            this.isElevatorOperational(elev)
         );
 
         // For each serving elevator, check which floors it can actually reach from current floor
@@ -59,7 +59,7 @@ export class FloorSelectionService {
         const candidates = elevators.filter(elev =>
             fromFloor >= elev.minFloor && fromFloor <= elev.maxFloor &&
             toFloor >= elev.minFloor && toFloor <= elev.maxFloor &&
-            elev.status !== 'error'
+            this.isElevatorOperational(elev)
         );
 
         if (candidates.length === 0) return null;
@@ -89,7 +89,7 @@ export class FloorSelectionService {
      * Check if an elevator can serve a request based on its current state and position.
      */
     private canServeRequest(elevator: Elevator, fromFloor: number, toFloor: number): boolean {
-        if (elevator.status === 'error') return false;
+        if (!this.isElevatorOperational(elevator)) return false;
 
         // Check if elevator is within range
         if (fromFloor < elevator.minFloor || fromFloor > elevator.maxFloor ||
@@ -202,6 +202,16 @@ export class FloorSelectionService {
      */
     isFloorValid(floor: number, elevator: Elevator): boolean {
         return floor >= elevator.minFloor && floor <= elevator.maxFloor;
+    }
+
+    /**
+     * Check if an elevator is operational and can accept new requests.
+     * Excludes elevators with error status or being deleted.
+     */
+    private isElevatorOperational(elevator: Elevator): boolean {
+        return elevator.status !== 'error' &&
+               elevator.status !== 'deleting' &&
+               !elevator.isDeleting;
     }
 
     /**

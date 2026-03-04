@@ -74,11 +74,12 @@ class ElevatorWebSocketService {
     }
 
     private handleMessage(rawData: any) {
-        //console.log('📨 Received WebSocket data:', rawData);
+        console.log('📨 Received WebSocket data:', rawData);
 
         // Backend sends ElevatorStatus format: { "ElevatorName": { name, current_floor, direction, requests, min_floor, max_floor } }
         if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
             const elevatorNames = Object.keys(rawData);
+            console.log('📊 Elevator names in broadcast:', elevatorNames, `(count: ${elevatorNames.length})`);
 
             // Convert backend ElevatorStatus format to client format
             const clientElevators = elevatorNames.map(elevatorName => {
@@ -88,9 +89,12 @@ class ElevatorWebSocketService {
                 const pendingRequests = backendElevator.requests || 0;
                 const backendDirection = backendElevator.direction || '';
 
+                // Check if elevator is being deleted
+                const isDeleting = backendElevator.is_deleting === true;
+
                 // Elevator should be idle when no requests exist, regardless of direction
                 const isIdle = pendingRequests === 0;
-                const status = isIdle ? 'idle' : 'moving';
+                const status = isDeleting ? 'deleting' : (isIdle ? 'idle' : 'moving');
 
                 // Convert direction: set to null when idle, otherwise use backend direction
                 let direction: 'up' | 'down' | null = null;
@@ -107,14 +111,18 @@ class ElevatorWebSocketService {
                     minFloor: backendElevator.min_floor || 0,
                     maxFloor: backendElevator.max_floor || 10,
                     currentFloor: backendElevator.current_floor || 0,
-                    status: status as 'idle' | 'moving' | 'error',
+                    status: status as 'idle' | 'moving' | 'error' | 'deleting',
                     direction: direction,
                     doorsOpen: false,
-                    hasPassenger: false
+                    hasPassenger: false,
+                    isDeleting: isDeleting
                 };
             });
 
             // Update stores
+            // This will automatically remove any elevators that are no longer in the backend status
+            // (i.e., those that have completed deletion)
+            console.log('🔄 Updating elevators store with', clientElevators.length, 'elevators');
             elevators.set(clientElevators);
             systemStatus.set({
                 healthy: true,
@@ -123,7 +131,7 @@ class ElevatorWebSocketService {
                 alerts: []
             });
 
-            // console.log('✅ Updated elevators:', clientElevators);
+            console.log('✅ Updated elevators:', clientElevators);
         } else {
             console.warn('❌ Unexpected WebSocket data format:', rawData);
         }
@@ -150,7 +158,7 @@ class ElevatorWebSocketService {
             }, delay);
         } else {
             console.error('Max WebSocket reconnection attempts reached');
-            addNotification('Connection lost. Please refresh the page.');
+            addNotification('Connection lost. Please refresh the page.', 'error', 10000);
         }
     }
 

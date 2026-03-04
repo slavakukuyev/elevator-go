@@ -3,6 +3,7 @@ package elevator
 import (
 	"context"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/slavakukuyev/elevator-go/internal/constants"
@@ -23,6 +24,7 @@ type Elevator struct {
 	logger            *slog.Logger
 	operationTimeout  time.Duration // Timeout for elevator operations
 	overloadThreshold int           // Maximum number of requests before considering elevator overloaded
+	isDeleting        atomic.Bool   // Flag for graceful deletion without interrupting movement
 }
 
 // New creates a new elevator instance with context support
@@ -571,25 +573,27 @@ func (e *Elevator) OverloadThreshold() int {
 
 func (e *Elevator) GetStatus() domain.ElevatorStatus {
 	requestCount := e.directionsManager.DirectionsLength()
-	return e.state.GetStatus(requestCount)
+	status := e.state.GetStatus(requestCount)
+	status.IsDeleting = e.isDeleting.Load()
+	return status
 }
 
-// MarkForDeletion marks the elevator for deletion by setting its direction to deleting
-// This prevents new requests from being accepted while allowing current ones to finish
+// MarkForDeletion marks the elevator for deletion without interrupting current movement.
+// The elevator continues processing its pending requests until idle, then gets removed.
 func (e *Elevator) MarkForDeletion() {
-	e.state.SetDirection(domain.DirectionDeleting)
+	e.isDeleting.Store(true)
 	e.logger.Info("elevator marked for deletion",
 		slog.String("elevator", e.Name()))
 }
 
 // IsMarkedForDeletion returns true if the elevator is marked for deletion
 func (e *Elevator) IsMarkedForDeletion() bool {
-	return e.CurrentDirection() == domain.DirectionDeleting
+	return e.isDeleting.Load()
 }
 
 // CanAcceptRequests returns true if the elevator can accept new requests
 func (e *Elevator) CanAcceptRequests() bool {
-	return e.CurrentDirection().IsOperational()
+	return !e.isDeleting.Load() && e.CurrentDirection().IsOperational()
 }
 
 // HasPendingRequests returns true if the elevator has pending requests
@@ -598,10 +602,10 @@ func (e *Elevator) HasPendingRequests() bool {
 }
 
 // GetHealthMetrics returns health metrics including circuit breaker status
-func (e *Elevator) GetHealthMetrics() map[string]interface{} {
+func (e *Elevator) GetHealthMetrics() map[string]any {
 	state, failures, successes := e.circuitBreaker.GetMetrics()
 
-	return map[string]interface{}{
+	return map[string]any{
 		"name":                      e.Name(),
 		"current_floor":             e.CurrentFloor().Value(),
 		"direction":                 string(e.CurrentDirection()),

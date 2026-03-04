@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/slavakukuyev/elevator-go/internal/constants"
@@ -185,6 +186,18 @@ func (h *V1Handlers) ElevatorCreateHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Trim whitespace from elevator name
+	requestBody.Name = strings.TrimSpace(requestBody.Name)
+
+	// Validate elevator name is not empty after trimming
+	if requestBody.Name == "" {
+		h.logger.ErrorContext(r.Context(), "elevator name is required",
+			slog.String("request_id", requestID))
+		rw.WriteError(http.StatusBadRequest, ErrorCodeValidation,
+			"Validation Failed", "Elevator name is required")
+		return
+	}
+
 	// Validate client input floors for elevator creation
 	if _, err := domain.NewFloorWithValidation(requestBody.MinFloor); err != nil {
 		h.logger.ErrorContext(r.Context(), "invalid min floor in elevator creation request",
@@ -264,6 +277,9 @@ func (h *V1Handlers) ElevatorDeleteHandler(w http.ResponseWriter, r *http.Reques
 			"Invalid JSON", "Request body contains invalid JSON")
 		return
 	}
+
+	// Trim whitespace from elevator name
+	requestBody.Name = strings.TrimSpace(requestBody.Name)
 
 	// Validate elevator name
 	if requestBody.Name == "" {

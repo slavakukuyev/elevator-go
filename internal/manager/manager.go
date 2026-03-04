@@ -47,7 +47,7 @@ func (m *Manager) AddElevator(ctx context.Context, cfg *config.Config, name stri
 
 	// Check if elevator with the same name already exists - optimized lock scope
 	if m.elevatorExists(name) {
-		err := domain.NewValidationError("elevator with this name already exists", nil).
+		err := domain.NewConflictError("elevator with this name already exists", nil).
 			WithContext("name", name)
 		m.logger.ErrorContext(createCtx, "failed to add elevator",
 			slog.String("name", name),
@@ -155,15 +155,16 @@ func (m *Manager) DeleteElevator(ctx context.Context, name string) error {
 		slog.Bool("has_pending_requests", elevator.HasPendingRequests()))
 
 	// Wait for pending requests to finish with timeout
-	if err := m.waitForElevatorToFinish(deleteCtx, elevator); err != nil {
-		m.logger.ErrorContext(deleteCtx, "timeout waiting for elevator to finish pending requests",
+	waitErr := m.waitForElevatorToFinish(deleteCtx, elevator)
+	if waitErr != nil {
+		m.logger.WarnContext(deleteCtx, "timeout waiting for elevator to finish pending requests, proceeding with forced removal",
 			slog.String("elevator", name),
-			slog.String("error", err.Error()))
-		return domain.NewInternalError("timeout waiting for elevator to complete pending requests", err).
-			WithContext("name", name)
+			slog.Bool("had_pending_requests", elevator.HasPendingRequests()),
+			slog.String("error", waitErr.Error()))
+		// Continue with removal even after timeout - we don't want zombies
 	}
 
-	// Remove elevator from the manager's list
+	// Remove elevator from the manager's list (even if pending requests remain)
 	if err := m.removeElevatorFromList(name); err != nil {
 		m.logger.ErrorContext(deleteCtx, "failed to remove elevator from manager list",
 			slog.String("elevator", name),
@@ -173,6 +174,15 @@ func (m *Manager) DeleteElevator(ctx context.Context, name string) error {
 
 	// Shutdown the elevator gracefully
 	elevator.Shutdown()
+
+	if waitErr != nil {
+		m.logger.InfoContext(deleteCtx, "elevator forcefully deleted after timeout",
+			slog.String("elevator", name),
+			slog.String("warning", "some pending requests may have been dropped"))
+		// Return a warning error to inform the caller, but deletion succeeded
+		return domain.NewValidationError("elevator deleted but some pending requests may have been dropped", waitErr).
+			WithContext("name", name)
+	}
 
 	m.logger.InfoContext(deleteCtx, "elevator successfully deleted",
 		slog.String("elevator", name))
@@ -613,13 +623,13 @@ func elevatorWithMinRequestsByDirection(elevators []*elevator.Elevator, directio
 	return el
 }
 
-func (m *Manager) GetStatus() (map[string]interface{}, error) {
+func (m *Manager) GetStatus() (map[string]any, error) {
 	// Use a timeout for status collection to prevent hanging
 	ctx, cancel := context.WithTimeout(m.ctx, m.cfg.HealthCheckTimeout)
 	defer cancel()
 
 	type statusResult struct {
-		status map[string]interface{}
+		status map[string]any
 		err    error
 	}
 
@@ -627,8 +637,10 @@ func (m *Manager) GetStatus() (map[string]interface{}, error) {
 
 	go func() {
 		m.mu.RLock()
-		status := make(map[string]interface{}, len(m.elevators))
+		status := make(map[string]any, len(m.elevators))
 		for _, e := range m.elevators {
+			// Include all elevators, even those marked for deletion
+			// The frontend will show "Deleting..." status for them
 			status[e.Name()] = e.GetStatus()
 		}
 		m.mu.RUnlock()
@@ -644,13 +656,13 @@ func (m *Manager) GetStatus() (map[string]interface{}, error) {
 }
 
 // GetHealthStatus returns health status for all elevators including circuit breaker metrics
-func (m *Manager) GetHealthStatus() (map[string]interface{}, error) {
+func (m *Manager) GetHealthStatus() (map[string]any, error) {
 	// Use a timeout for health status collection
 	ctx, cancel := context.WithTimeout(m.ctx, m.cfg.HealthCheckTimeout)
 	defer cancel()
 
 	type healthResult struct {
-		health map[string]interface{}
+		health map[string]any
 		err    error
 	}
 
@@ -658,14 +670,19 @@ func (m *Manager) GetHealthStatus() (map[string]interface{}, error) {
 
 	go func() {
 		m.mu.RLock()
-		health := make(map[string]interface{})
+		health := make(map[string]any)
 
-		elevatorHealth := make(map[string]interface{}, len(m.elevators))
+		elevatorHealth := make(map[string]any, len(m.elevators))
 		totalElevators := len(m.elevators)
 		healthyElevators := 0
 		activeRequests := 0
 
 		for _, e := range m.elevators {
+			// Skip elevators that are being deleted
+			if e.IsMarkedForDeletion() {
+				continue
+			}
+
 			metrics := e.GetHealthMetrics()
 			elevatorHealth[e.Name()] = metrics
 
@@ -701,7 +718,7 @@ func (m *Manager) GetHealthStatus() (map[string]interface{}, error) {
 }
 
 // GetMetrics returns operational metrics for monitoring
-func (m *Manager) GetMetrics() map[string]interface{} {
+func (m *Manager) GetMetrics() map[string]any {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -713,6 +730,11 @@ func (m *Manager) GetMetrics() map[string]interface{} {
 	totalFailedRequests := 0
 
 	for _, e := range m.elevators {
+		// Skip elevators that are being deleted
+		if e.IsMarkedForDeletion() {
+			continue
+		}
+
 		directions := e.Directions()
 		upRequests := directions.UpDirectionLength()
 		downRequests := directions.DownDirectionLength()
@@ -763,7 +785,7 @@ func (m *Manager) GetMetrics() map[string]interface{} {
 
 	avgLoad := float64(totalRequests) / float64(max(len(m.elevators), 1))
 
-	return map[string]interface{}{
+	return map[string]any{
 		"total_elevators":     len(m.elevators),
 		"healthy_elevators":   healthyElevators,
 		"total_requests":      totalRequests,
@@ -794,14 +816,6 @@ func (m *Manager) calculatePerformanceScore(avgLoad, healthRatio float64) float6
 
 	// Combined score: 60% health, 40% load efficiency
 	return (healthScore * 0.6) + (loadScore * 0.4)
-}
-
-// max returns the maximum of two integers
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 // abs returns the absolute value of an integer

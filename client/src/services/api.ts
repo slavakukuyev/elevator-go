@@ -137,6 +137,8 @@ class APIService {
     }
 
     async createElevator(config: ElevatorConfig): Promise<Elevator> {
+        console.log('[createElevator] Starting with config:', config);
+
         const response = await this.request<BackendElevatorCreateResponse>('/elevators', {
             method: 'POST',
             body: JSON.stringify({
@@ -147,13 +149,19 @@ class APIService {
             })
         });
 
+        console.log('[createElevator] Backend response:', response);
+
         const elevator = this.transformElevatorResponse(response);
+        console.log('[createElevator] Transformed elevator:', elevator);
 
         if (elevator) {
             addElevator(elevator);
-            addNotification(`Elevator ${elevator.name} created successfully`);
+            console.log('[createElevator] Added to store');
+            addNotification(`Elevator ${elevator.name} created successfully`, 'success');
+            console.log('[createElevator] Notification added');
         }
 
+        console.log('[createElevator] Returning elevator:', elevator);
         return elevator;
     }
 
@@ -166,7 +174,7 @@ class APIService {
         const floorRequest = this.transformFloorRequestResponse(response);
 
         if (floorRequest) {
-            addNotification(`Floor request from ${fromFloor} to ${toFloor} submitted`);
+            addNotification(`Floor request from ${fromFloor} to ${toFloor} submitted`, 'info');
         }
 
         return floorRequest;
@@ -264,9 +272,13 @@ class APIService {
         throw new Error('Not implemented');
     }
 
-    async deleteElevator(_name: string): Promise<void> {
-        console.warn('deleteElevator: Not implemented in backend API');
-        throw new Error('Not implemented');
+    async deleteElevator(name: string): Promise<void> {
+        await this.request<void>('/elevators', {
+            method: 'DELETE',
+            body: JSON.stringify({ name })
+        });
+
+        addNotification(`Elevator ${name} deleted successfully`, 'success');
     }
 
     async getFloorRequests(): Promise<FloorRequest[]> {

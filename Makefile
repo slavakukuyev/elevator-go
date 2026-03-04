@@ -61,6 +61,12 @@ help:
 	@echo "  test/benchmarks     - Run benchmark tests"
 	@echo "  test/all            - Run all tests"
 	@echo ""
+	@echo "$(YELLOW)Lint:$(NC)"
+	@echo "  lint                - Run all linters (Go + TypeScript)"
+	@echo "  lint/go             - Run golangci-lint on Go files"
+	@echo "  lint/ts             - Run ESLint on TypeScript/Svelte files"
+	@echo "  lint/fix            - Auto-fix TS/Svelte lint + format"
+	@echo ""
 	@echo "$(YELLOW)Utilities:$(NC)"
 	@echo "  cleanup             - Clean up all ports and processes"
 	@echo "  debug-prepare       - Prepare environment for debugging"
@@ -184,6 +190,27 @@ test/benchmarks:
 
 test/all: test/unit test/race test/acceptance test/integration
 	@echo "$(GREEN)All tests completed successfully!$(NC)"
+
+# Lint targets
+.PHONY: lint lint/go lint/ts lint/fix
+
+lint: lint/go lint/ts
+
+lint/go:
+	@echo "$(YELLOW)Running Go linters...$(NC)"
+	golangci-lint run ./...
+	@echo "$(GREEN)Go lint passed!$(NC)"
+
+lint/ts:
+	@echo "$(YELLOW)Running TypeScript/Svelte linters...$(NC)"
+	cd client && npm run lint
+	@echo "$(GREEN)TypeScript lint passed!$(NC)"
+
+lint/fix:
+	@echo "$(YELLOW)Auto-fixing TypeScript/Svelte lint issues...$(NC)"
+	cd client && npm run lint:fix
+	cd client && npm run format
+	@echo "$(GREEN)Lint fix complete!$(NC)"
 
 # Debug preparation (simplified)
 .PHONY: debug-prepare

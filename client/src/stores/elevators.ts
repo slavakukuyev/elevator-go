@@ -1,6 +1,6 @@
 // stores/elevators.ts - Svelte stores for elevator state management
 import { writable, derived } from 'svelte/store';
-import type { Elevator, SystemStatus, ConnectionStatus, FloorRequest, Theme } from '../types';
+import type { Elevator, SystemStatus, ConnectionStatus, FloorRequest, Theme, Notification } from '../types';
 
 // Primary stores
 export const elevators = writable<Elevator[]>([]);
@@ -19,7 +19,7 @@ export const isLoading = writable(false);
 export const showCreateModal = writable(false);
 export const showMonitoringPanel = writable(false);
 export const showControlPanel = writable(true);
-export const notifications = writable<string[]>([]);
+export const notifications = writable<Notification[]>([]);
 
 // Derived stores for performance optimization
 export const availableElevators = derived(
@@ -118,12 +118,20 @@ export function updateFloorRequest(id: string, updates: Partial<FloorRequest>) {
     );
 }
 
-export function addNotification(message: string) {
-    notifications.update(list => [...list, message]);
-    // Auto-remove after 5 seconds
+export function addNotification(message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info', duration: number = 5000) {
+    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const notification: Notification = { id, message, type, duration };
+
+    notifications.update(list => [...list, notification]);
+
+    // Auto-remove after specified duration
     setTimeout(() => {
-        notifications.update(list => list.filter(msg => msg !== message));
-    }, 5000);
+        notifications.update(list => list.filter(n => n.id !== id));
+    }, duration);
+}
+
+export function removeNotification(id: string) {
+    notifications.update(list => list.filter(n => n.id !== id));
 }
 
 export function toggleTheme() {
@@ -140,7 +148,7 @@ export function toggleControlPanel() {
 export async function initializeSampleData() {
     try {
         isLoading.set(true);
-        addNotification('Creating sample elevators...');
+        addNotification('Creating sample elevators...', 'info');
 
         // Sample elevator configurations
         const sampleConfigs = [
@@ -166,17 +174,14 @@ export async function initializeSampleData() {
             }
         }
 
-        addNotification('Sample elevators created successfully!');
+        addNotification('Sample elevators created successfully!', 'success');
 
-        // Request current status from WebSocket to sync with backend
-        const { wsService } = await import('../services/websocket');
-        if (wsService.isConnected()) {
-            wsService.requestStatus();
-        }
+        // WebSocket automatically sends status updates every 100ms
+        // No need to explicitly request status
 
     } catch (error) {
         console.error('Failed to initialize sample data:', error);
-        addNotification('Failed to create sample elevators. Please try again.');
+        addNotification('Failed to create sample elevators. Please try again.', 'error');
     } finally {
         isLoading.set(false);
     }
