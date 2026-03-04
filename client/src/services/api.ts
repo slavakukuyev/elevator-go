@@ -273,12 +273,17 @@ class APIService {
     }
 
     async deleteElevator(name: string): Promise<void> {
-        await this.request<void>('/elevators', {
-            method: 'DELETE',
-            body: JSON.stringify({ name })
-        });
-
-        addNotification(`Elevator ${name} deleted successfully`, 'success');
+        try {
+            await this.request<void>('/elevators', {
+                method: 'DELETE',
+                body: JSON.stringify({ name })
+            });
+            addNotification(`Elevator ${name} deleted successfully`, 'success');
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Unknown error';
+            addNotification(`Failed to delete ${name}: ${msg}`, 'error');
+            throw error;
+        }
     }
 
     async getFloorRequests(): Promise<FloorRequest[]> {

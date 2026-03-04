@@ -190,8 +190,8 @@ func (m *Manager) DeleteElevator(ctx context.Context, name string) error {
 		m.logger.InfoContext(deleteCtx, "elevator forcefully deleted after timeout",
 			slog.String("elevator", name),
 			slog.String("warning", "some pending requests may have been dropped"))
-		// Return a warning error to inform the caller, but deletion succeeded
-		return domain.NewValidationError("elevator deleted but some pending requests may have been dropped", waitErr).
+		// Return an internal error for timeout-forced deletions
+		return domain.NewInternalError("elevator deleted but some pending requests may have been dropped", waitErr).
 			WithContext("name", name)
 	}
 
