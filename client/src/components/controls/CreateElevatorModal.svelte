@@ -3,7 +3,7 @@
 	import Modal from '../common/Modal.svelte';
 	import Button from '../common/Button.svelte';
 	import { elevatorAPI } from '../../services/api';
-	import { elevators } from '../../stores/elevators';
+	import { elevators, addNotification } from '../../stores/elevators';
 	import { validationService } from '../../utils/validation';
 	import type { ElevatorConfig, APIError } from '../../types';
 	import type { ValidationError } from '../../utils/validation';
@@ -103,11 +103,18 @@
 	}
 
 	async function handleSubmit() {
-		if (isSubmitting) return;
+		if (isSubmitting) {
+			console.log('[handleSubmit] Already submitting, returning early');
+			return;
+		}
 
+		console.log('[handleSubmit] Starting submit');
 		// Clear previous errors
 		errors = [];
 		apiError = null;
+
+		// Trim the name before validation
+		formData.name = formData.name.trim();
 
 		// Validate form
 		const configValidation = validationService.validateElevatorConfig(formData);
@@ -119,18 +126,33 @@
 		errors = [...configValidation.errors, ...uniqueNameValidation.errors];
 
 		if (errors.length > 0) {
+			console.log('[handleSubmit] Validation errors:', errors);
+			// Show validation errors as toast notifications
+			errors.forEach(error => {
+				addNotification(error.message, 'error', 7000);
+			});
 			return;
 		}
 
 		isSubmitting = true;
+		console.log('[handleSubmit] isSubmitting set to true');
 
 		try {
+			console.log('[handleSubmit] Calling elevatorAPI.createElevator');
 			await elevatorAPI.createElevator(formData);
+			console.log('[handleSubmit] API call successful, calling handleClose');
 			handleClose();
+			console.log('[handleSubmit] handleClose completed');
 		} catch (error) {
-			console.error('Failed to create elevator:', error);
+			console.error('[handleSubmit] Error caught:', error);
 			apiError = parseAPIError(error as Error);
+			console.log('[handleSubmit] Parsed API error:', apiError);
+
+			// Show API error as toast notification
+			const errorMessage = apiError.userMessage || apiError.message || 'Failed to create elevator';
+			addNotification(errorMessage, 'error', 7000);
 		} finally {
+			console.log('[handleSubmit] Finally block - setting isSubmitting to false');
 			isSubmitting = false;
 		}
 	}
@@ -144,7 +166,7 @@
 	}
 </script>
 
-<Modal bind:open title="Create New Elevator" size="medium" on:close={handleClose}>
+<Modal bind:open title="Create New Elevator" size="medium" closeOnClickOutside={false} on:close={handleClose}>
 	<form on:submit|preventDefault={handleSubmit} class="space-y-4">
 		<!-- API Error Display -->
 		{#if apiError}
@@ -234,6 +256,7 @@
 				id="elevator-name"
 				type="text"
 				bind:value={formData.name}
+				on:blur={() => formData.name = formData.name.trim()}
 				class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white {hasFieldError(
 					'name'
 				)

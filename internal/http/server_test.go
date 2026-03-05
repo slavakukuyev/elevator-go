@@ -95,7 +95,7 @@ func TestElevatorHandler_Comprehensive(t *testing.T) {
 				MaxFloor: 10,
 			},
 			setupElevators: []string{"DuplicateElevator"},
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusConflict,
 			expectError:    true,
 		},
 		{

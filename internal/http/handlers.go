@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/slavakukuyev/elevator-go/internal/constants"
@@ -44,6 +45,17 @@ type ElevatorCreateResponse struct {
 	MinFloor int    `json:"min_floor"`
 	MaxFloor int    `json:"max_floor"`
 	Message  string `json:"message"`
+}
+
+// ElevatorDeleteRequest represents the request for elevator deletion
+type ElevatorDeleteRequest struct {
+	Name string `json:"name"`
+}
+
+// ElevatorDeleteResponse represents the response for elevator deletion
+type ElevatorDeleteResponse struct {
+	Name    string `json:"name"`
+	Message string `json:"message"`
 }
 
 // HealthResponse represents the health check response
@@ -174,6 +186,18 @@ func (h *V1Handlers) ElevatorCreateHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Trim whitespace from elevator name
+	requestBody.Name = strings.TrimSpace(requestBody.Name)
+
+	// Validate elevator name is not empty after trimming
+	if requestBody.Name == "" {
+		h.logger.ErrorContext(r.Context(), "elevator name is required",
+			slog.String("request_id", requestID))
+		rw.WriteError(http.StatusBadRequest, ErrorCodeValidation,
+			"Validation Failed", "Elevator name is required")
+		return
+	}
+
 	// Validate client input floors for elevator creation
 	if _, err := domain.NewFloorWithValidation(requestBody.MinFloor); err != nil {
 		h.logger.ErrorContext(r.Context(), "invalid min floor in elevator creation request",
@@ -226,6 +250,67 @@ func (h *V1Handlers) ElevatorCreateHandler(w http.ResponseWriter, r *http.Reques
 		slog.String("component", constants.ComponentHTTPHandler))
 
 	rw.WriteJSON(http.StatusCreated, response)
+}
+
+// ElevatorDeleteHandler handles v1 elevator deletion (DELETE /v1/elevators)
+func (h *V1Handlers) ElevatorDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	requestID := logging.GetRequestID(r.Context())
+	rw := NewResponseWriter(w, h.logger, requestID)
+
+	if r.Method != http.MethodDelete {
+		h.logger.WarnContext(r.Context(), "invalid request method for elevator delete endpoint",
+			slog.String("method", r.Method),
+			slog.String("expected", "DELETE"),
+			slog.String("request_id", requestID))
+		rw.WriteError(http.StatusMethodNotAllowed, ErrorCodeMethodNotAllowed,
+			"Method not allowed", "Only DELETE method is supported")
+		return
+	}
+
+	var requestBody ElevatorDeleteRequest
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&requestBody); err != nil {
+		h.logger.ErrorContext(r.Context(), "failed to decode elevator delete request",
+			slog.String("error", err.Error()),
+			slog.String("request_id", requestID))
+		rw.WriteError(http.StatusBadRequest, ErrorCodeInvalidJSON,
+			"Invalid JSON", "Request body contains invalid JSON")
+		return
+	}
+
+	// Trim whitespace from elevator name
+	requestBody.Name = strings.TrimSpace(requestBody.Name)
+
+	// Validate elevator name
+	if requestBody.Name == "" {
+		h.logger.ErrorContext(r.Context(), "elevator name is required",
+			slog.String("request_id", requestID))
+		rw.WriteError(http.StatusBadRequest, ErrorCodeValidation,
+			"Validation Failed", "Elevator name is required")
+		return
+	}
+
+	err := h.manager.DeleteElevator(r.Context(), requestBody.Name)
+	if err != nil {
+		h.logger.ErrorContext(r.Context(), "failed to delete elevator",
+			slog.String("elevator_name", requestBody.Name),
+			slog.String("error", err.Error()),
+			slog.String("request_id", requestID))
+		rw.WriteDomainError(err)
+		return
+	}
+
+	response := ElevatorDeleteResponse{
+		Name:    requestBody.Name,
+		Message: "Elevator deleted successfully",
+	}
+
+	h.logger.InfoContext(r.Context(), "elevator deleted successfully",
+		slog.String("elevator_name", requestBody.Name),
+		slog.String("request_id", requestID),
+		slog.String("component", constants.ComponentHTTPHandler))
+
+	rw.WriteJSON(http.StatusOK, response)
 }
 
 // HealthHandler handles v1 health checks (GET /v1/health)
@@ -312,6 +397,7 @@ func (h *V1Handlers) APIInfoHandler(w http.ResponseWriter, r *http.Request) {
 		Endpoints: map[string]string{
 			"POST /v1/floors/request": "Request elevator from one floor to another",
 			"POST /v1/elevators":      "Create a new elevator in the system",
+			"DELETE /v1/elevators":    "Delete an elevator from the system",
 			"GET /v1/health":          "Check system health status",
 			"GET /v1/metrics":         "Get system metrics",
 			"GET /v1":                 "Get API information",

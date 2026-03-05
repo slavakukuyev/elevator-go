@@ -80,6 +80,7 @@ A Go-based elevator control system with real-time WebSocket updates and Svelte f
 
 #### API Endpoints
 - `POST /v1/elevators` - Create new elevator
+- `DELETE /v1/elevators` - Gracefully delete elevator (finishes queued requests first)
 - `POST /v1/floors/request` - Request elevator service
 - `GET /v1/health` - System health status
 - `GET /v1/metrics` - Performance metrics
@@ -302,6 +303,15 @@ Content-Type: application/json
 GET /v1/health
 ```
 
+#### Delete Elevator
+```http
+DELETE /v1/elevators
+Content-Type: application/json
+
+{"name": "Elevator-1"}
+```
+Elevator finishes queued requests before removal. See [`docs/elevator_deletion.md`](docs/elevator_deletion.md).
+
 #### Metrics
 ```http
 GET /v1/metrics
@@ -345,10 +355,10 @@ GET /v1/metrics
 - Document public APIs and complex algorithms
 
 ### Code Quality
-- **Linting**: `golangci-lint` for Go code
-- **Formatting**: `go fmt` and `goimports`
+- **Linting**: `make lint` (Go + TypeScript), `make lint/go`, `make lint/ts`
+- **Formatting**: `make lint/fix` (auto-fix TS/Svelte + Prettier)
 - **Testing**: Comprehensive test suites
-- **Documentation**: GoDoc comments
+- **Documentation**: GoDoc comments, `docs/` folder
 
 ## License
 

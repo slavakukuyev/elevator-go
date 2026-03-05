@@ -4,9 +4,10 @@ package domain
 type Direction string
 
 const (
-	DirectionUp   Direction = "up"
-	DirectionDown Direction = "down"
-	DirectionIdle Direction = ""
+	DirectionUp       Direction = "up"
+	DirectionDown     Direction = "down"
+	DirectionIdle     Direction = ""
+	DirectionDeleting Direction = "deleting"
 )
 
 // String returns the string representation of the direction
@@ -16,7 +17,7 @@ func (d Direction) String() string {
 
 // IsValid checks if the direction is valid
 func (d Direction) IsValid() bool {
-	return d == DirectionUp || d == DirectionDown || d == DirectionIdle
+	return d == DirectionUp || d == DirectionDown || d == DirectionIdle || d == DirectionDeleting
 }
 
 // Opposite returns the opposite direction
@@ -29,4 +30,9 @@ func (d Direction) Opposite() Direction {
 	default:
 		return DirectionIdle
 	}
+}
+
+// IsOperational returns true if the elevator can accept new requests
+func (d Direction) IsOperational() bool {
+	return d != DirectionDeleting
 }

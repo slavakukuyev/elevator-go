@@ -24,9 +24,9 @@ import (
 type ManagerInterface interface {
 	RequestElevator(ctx context.Context, fromFloor, toFloor int) (*elevator.Elevator, error)
 	AddElevator(ctx context.Context, cfg *config.Config, name string, minFloor, maxFloor int, eachFloorDuration, openDoorDuration time.Duration, overloadThreshold int) error
-	GetStatus() (map[string]interface{}, error)
-	GetHealthStatus() (map[string]interface{}, error)
-	GetMetrics() map[string]interface{}
+	GetStatus() (map[string]any, error)
+	GetHealthStatus() (map[string]any, error)
+	GetMetrics() map[string]any
 }
 
 // MockManager for testing - implements ManagerInterface
@@ -52,28 +52,28 @@ func (m *MockManager) AddElevator(ctx context.Context, cfg *config.Config, name 
 	return args.Error(0)
 }
 
-func (m *MockManager) GetStatus() (map[string]interface{}, error) {
+func (m *MockManager) GetStatus() (map[string]any, error) {
 	args := m.Called()
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(map[string]interface{}), args.Error(1)
+	return args.Get(0).(map[string]any), args.Error(1)
 }
 
-func (m *MockManager) GetHealthStatus() (map[string]interface{}, error) {
+func (m *MockManager) GetHealthStatus() (map[string]any, error) {
 	args := m.Called()
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(map[string]interface{}), args.Error(1)
+	return args.Get(0).(map[string]any), args.Error(1)
 }
 
-func (m *MockManager) GetMetrics() map[string]interface{} {
+func (m *MockManager) GetMetrics() map[string]any {
 	args := m.Called()
 	if args.Get(0) == nil {
 		return nil
 	}
-	return args.Get(0).(map[string]interface{})
+	return args.Get(0).(map[string]any)
 }
 
 // TestV1Handlers is a test version of V1Handlers that uses the interface
@@ -275,7 +275,7 @@ func TestV1Handlers_APIInfoHandler(t *testing.T) {
 		assert.NotNil(t, response.Data)
 
 		// Check specific fields in the response
-		data, ok := response.Data.(map[string]interface{})
+		data, ok := response.Data.(map[string]any)
 		require.True(t, ok)
 
 		assert.Equal(t, "Elevator Control System API", data["name"])
@@ -301,7 +301,7 @@ func TestV1Handlers_FloorRequestHandler(t *testing.T) {
 		response := parseAPIResponse(t, w.Body.Bytes())
 		assert.True(t, response.Success)
 
-		data, ok := response.Data.(map[string]interface{})
+		data, ok := response.Data.(map[string]any)
 		require.True(t, ok)
 		assert.Contains(t, data, "message")
 		assert.Contains(t, data, "from_floor")
@@ -390,7 +390,7 @@ func TestV1Handlers_ElevatorCreateHandler(t *testing.T) {
 		response := parseAPIResponse(t, w.Body.Bytes())
 		assert.True(t, response.Success)
 
-		data, ok := response.Data.(map[string]interface{})
+		data, ok := response.Data.(map[string]any)
 		require.True(t, ok)
 		assert.Contains(t, data, "message")
 		assert.Contains(t, data, "name")
@@ -401,8 +401,8 @@ func TestV1Handlers_ElevatorCreateHandler(t *testing.T) {
 		mockManager.AssertExpectations(t)
 	})
 
-	t.Run("handles manager error", func(t *testing.T) {
-		mockManager.On("AddElevator", mock.Anything, mock.Anything, "duplicate", 0, 10, time.Second, time.Second).Return(domain.NewValidationError("elevator with this name already exists", nil))
+	t.Run("handles duplicate name with conflict error", func(t *testing.T) {
+		mockManager.On("AddElevator", mock.Anything, mock.Anything, "duplicate", 0, 10, time.Second, time.Second).Return(domain.NewConflictError("elevator with this name already exists", nil))
 
 		w := httptest.NewRecorder()
 		body := `{"name": "duplicate", "min_floor": 0, "max_floor": 10}`
@@ -410,10 +410,10 @@ func TestV1Handlers_ElevatorCreateHandler(t *testing.T) {
 
 		handlers.ElevatorCreateHandler(w, r)
 
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusConflict, w.Code)
 		response := parseAPIResponse(t, w.Body.Bytes())
 		assert.False(t, response.Success)
-		assert.Equal(t, "VALIDATION_ERROR", response.Error.Code)
+		assert.Equal(t, "CONFLICT", response.Error.Code)
 
 		mockManager.AssertExpectations(t)
 	})
@@ -447,7 +447,7 @@ func TestV1Handlers_ElevatorCreateHandler(t *testing.T) {
 func TestV1Handlers_HealthHandler(t *testing.T) {
 	t.Run("returns healthy status", func(t *testing.T) {
 		handlers, mockManager := setupTestHandlers()
-		statusData := map[string]interface{}{
+		statusData := map[string]any{
 			"total_elevators":  3,
 			"active_elevators": 2,
 			"system_status":    "healthy",
@@ -463,7 +463,7 @@ func TestV1Handlers_HealthHandler(t *testing.T) {
 		response := parseAPIResponse(t, w.Body.Bytes())
 		assert.True(t, response.Success)
 
-		data, ok := response.Data.(map[string]interface{})
+		data, ok := response.Data.(map[string]any)
 		require.True(t, ok)
 		assert.Equal(t, "healthy", data["status"])
 		assert.Contains(t, data, "timestamp")
@@ -496,11 +496,11 @@ func TestV1Handlers_HealthHandler_ZeroElevators(t *testing.T) {
 		handlers, mockManager := setupTestHandlers()
 
 		// Mock health status for zero elevators (healthy initial state)
-		healthData := map[string]interface{}{
+		healthData := map[string]any{
 			"total_elevators":   0,
 			"healthy_elevators": 0,
 			"system_healthy":    true, // Key assertion: system is healthy with 0 elevators
-			"elevators":         map[string]interface{}{},
+			"elevators":         map[string]any{},
 			"timestamp":         1640995200, // Mock timestamp
 		}
 		mockManager.On("GetHealthStatus").Return(healthData, nil)
@@ -515,14 +515,14 @@ func TestV1Handlers_HealthHandler_ZeroElevators(t *testing.T) {
 		response := parseAPIResponse(t, w.Body.Bytes())
 		assert.True(t, response.Success, "Response should be successful")
 
-		data, ok := response.Data.(map[string]interface{})
+		data, ok := response.Data.(map[string]any)
 		require.True(t, ok, "Response data should be a map")
 		assert.Equal(t, "healthy", data["status"], "Status should be 'healthy'")
 		assert.Contains(t, data, "timestamp", "Should contain timestamp")
 		assert.Contains(t, data, "checks", "Should contain health checks")
 
 		// Verify the checks contain our zero-elevator data
-		checks, ok := data["checks"].(map[string]interface{})
+		checks, ok := data["checks"].(map[string]any)
 		require.True(t, ok, "Checks should be a map")
 		assert.Equal(t, float64(0), checks["total_elevators"], "Total elevators should be 0")
 		assert.Equal(t, float64(0), checks["healthy_elevators"], "Healthy elevators should be 0")
@@ -535,13 +535,13 @@ func TestV1Handlers_HealthHandler_ZeroElevators(t *testing.T) {
 		handlers, mockManager := setupTestHandlers()
 
 		// Mock health status where system is explicitly unhealthy
-		healthData := map[string]interface{}{
+		healthData := map[string]any{
 			"total_elevators":   2,
 			"healthy_elevators": 0,
 			"system_healthy":    false, // System is unhealthy (e.g., all elevators broken)
-			"elevators": map[string]interface{}{
-				"Elevator1": map[string]interface{}{"status": "error"},
-				"Elevator2": map[string]interface{}{"status": "error"},
+			"elevators": map[string]any{
+				"Elevator1": map[string]any{"status": "error"},
+				"Elevator2": map[string]any{"status": "error"},
 			},
 			"timestamp": 1640995200,
 		}
@@ -557,7 +557,7 @@ func TestV1Handlers_HealthHandler_ZeroElevators(t *testing.T) {
 		response := parseAPIResponse(t, w.Body.Bytes())
 		assert.False(t, response.Success, "Response should be unsuccessful for unhealthy system")
 
-		data, ok := response.Data.(map[string]interface{})
+		data, ok := response.Data.(map[string]any)
 		require.True(t, ok, "Response data should be a map")
 		assert.Equal(t, "unhealthy", data["status"], "Status should be 'unhealthy'")
 
@@ -569,7 +569,7 @@ func TestV1Handlers_MetricsHandler(t *testing.T) {
 	handlers, mockManager := setupTestHandlers()
 
 	t.Run("returns system metrics", func(t *testing.T) {
-		metricsData := map[string]interface{}{
+		metricsData := map[string]any{
 			"total_requests":     150,
 			"average_wait_time":  30.5,
 			"total_elevators":    3,
@@ -587,12 +587,12 @@ func TestV1Handlers_MetricsHandler(t *testing.T) {
 		response := parseAPIResponse(t, w.Body.Bytes())
 		assert.True(t, response.Success)
 
-		data, ok := response.Data.(map[string]interface{})
+		data, ok := response.Data.(map[string]any)
 		require.True(t, ok)
 		assert.Contains(t, data, "timestamp")
 		assert.Contains(t, data, "metrics")
 
-		metrics, ok := data["metrics"].(map[string]interface{})
+		metrics, ok := data["metrics"].(map[string]any)
 		require.True(t, ok)
 		assert.Equal(t, float64(150), metrics["total_requests"])
 		assert.Equal(t, 30.5, metrics["average_wait_time"])
@@ -612,7 +612,7 @@ func TestV1Handlers_MetricsHandler(t *testing.T) {
 		response := parseAPIResponse(t, w.Body.Bytes())
 		assert.True(t, response.Success)
 
-		data, ok := response.Data.(map[string]interface{})
+		data, ok := response.Data.(map[string]any)
 		require.True(t, ok)
 		assert.Contains(t, data, "timestamp")
 		assert.Contains(t, data, "metrics")
