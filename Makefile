@@ -5,7 +5,8 @@ PKGS=./...
 UNIT_PKGS=$(shell go list ./internal/... ./cmd/...)
 
 # Docker configuration
-DOCKER_IMAGE_NAME=elevator-service
+DOCKER_IMAGE_SERVER=elevator-backend
+DOCKER_IMAGE_CLIENT=elevator-frontend
 DOCKER_TAG=latest
 BUILD_DIR=build
 
@@ -13,6 +14,9 @@ BUILD_DIR=build
 BACKEND_PORTS=6660,6661
 CLIENT_PORT=5173
 ALL_PORTS=$(BACKEND_PORTS),$(CLIENT_PORT)
+
+# Client directory (React client)
+CLIENT_DIR=client
 
 # Colors for output
 GREEN=\033[0;32m
@@ -39,15 +43,23 @@ help:
 	@echo "  clean               - Clean build artifacts"
 	@echo "  run                 - Build and run the elevator server"
 	@echo ""
-	@echo "$(YELLOW)Development:$(NC)"
-	@echo "  dev/client          - Run client in dev mode only"
-	@echo "  dev/local           - Run both backend and client locally"
+	@echo "$(YELLOW)Development (React client):$(NC)"
 	@echo "  server-dev          - Run backend server locally"
+	@echo "  client-install      - Install client dependencies"
+	@echo "  client-dev          - Run client in dev mode only (port 5173)"
+	@echo "  client-build        - Production build of the client"
+	@echo "  client-test         - Run client unit tests (vitest)"
+	@echo "  client-typecheck    - Typecheck the client (tsc)"
+	@echo "  client-check        - typecheck + lint + test (full gate)"
+	@echo "  dev/client          - Run client in dev mode only (port 5173)"
+	@echo "  dev/local           - Run backend + client locally"
 	@echo ""
 	@echo "$(YELLOW)Docker:$(NC)"
-	@echo "  docker/build        - Build Docker image"
+	@echo "  docker/build        - Build both Docker images (server + client)"
+	@echo "  docker/build-server - Build backend image only"
+	@echo "  docker/build-client - Build frontend image only"
 	@echo "  docker/run          - Run container (backend only)"
-	@echo "  docker/compose      - Run full compose setup"
+	@echo "  docker/compose      - Run full compose setup (2 containers)"
 	@echo "  docker/stop         - Stop and clean Docker containers"
 	@echo "  dev/full            - Run backend (Docker) + client (dev mode)"
 	@echo "  dev/backend         - Run backend in Docker only"
@@ -62,10 +74,10 @@ help:
 	@echo "  test/all            - Run all tests"
 	@echo ""
 	@echo "$(YELLOW)Lint:$(NC)"
-	@echo "  lint                - Run all linters (Go + TypeScript)"
+	@echo "  lint                - Run all linters (Go + client)"
 	@echo "  lint/go             - Run golangci-lint on Go files"
-	@echo "  lint/ts             - Run ESLint on TypeScript/Svelte files"
-	@echo "  lint/fix            - Auto-fix TS/Svelte lint + format"
+	@echo "  lint/ts             - Run ESLint on the client"
+	@echo "  lint/fix            - Auto-fix client lint issues"
 	@echo ""
 	@echo "$(YELLOW)Utilities:$(NC)"
 	@echo "  cleanup             - Clean up all ports and processes"
@@ -85,24 +97,45 @@ run: build_server
 	./${BIN_PATH}/${BIN_NAME}
 
 # Development targets
-.PHONY: cleanup server-dev client-dev dev/full dev/backend dev/client dev/local dev/stop
+.PHONY: cleanup server-dev client-install client-dev client-build client-test client-typecheck client-check \
+        dev/full dev/backend dev/client dev/local dev/stop
 
 # Unified cleanup target
 cleanup:
 	$(call cleanup_ports,$(ALL_PORTS))
 
-server-dev: 
+server-dev:
 	$(call cleanup_ports,$(BACKEND_PORTS))
 	@echo "Building and starting Go server locally..."
 	@make build_server
 	@echo "Backend will be available at: http://localhost:6660"
-	@echo "WebSocket will be available at: http://localhost:6661" 
+	@echo "WebSocket will be available at: http://localhost:6661"
 	ENV=development LOG_LEVEL=DEBUG DEFAULT_ELEVATOR_COUNT=0 ./${BIN_PATH}/${BIN_NAME}
+
+client-install:
+	@echo "$(YELLOW)Installing client dependencies...$(NC)"
+	cd $(CLIENT_DIR) && npm install
 
 client-dev:
 	$(call cleanup_ports,$(CLIENT_PORT))
-	@echo "Starting client dev server on port 5173..."
-	cd client && npm run dev
+	@echo "Starting client dev server on port $(CLIENT_PORT)..."
+	cd $(CLIENT_DIR) && npm run dev
+
+client-build:
+	@echo "$(YELLOW)Building client...$(NC)"
+	cd $(CLIENT_DIR) && npm run build
+	@echo "$(GREEN)Client build complete!$(NC)"
+
+client-test:
+	@echo "$(YELLOW)Running client unit tests...$(NC)"
+	cd $(CLIENT_DIR) && npm run test
+
+client-typecheck:
+	@echo "$(YELLOW)Typechecking client...$(NC)"
+	cd $(CLIENT_DIR) && npm run typecheck
+
+client-check: client-typecheck lint/ts client-test
+	@echo "$(GREEN)Client quality gate passed!$(NC)"
 
 dev/full:
 	@echo "Starting backend in Docker and client in dev mode..."
@@ -131,32 +164,44 @@ dev/stop:
 	$(call cleanup_ports,$(ALL_PORTS))
 
 # Docker targets
-.PHONY: docker/build docker/run docker/compose docker/stop
+.PHONY: docker/build docker/build-server docker/build-client docker/run docker/compose docker/stop
 
-docker/build:
-	@echo "Building Docker image..."
-	docker build -f ${BUILD_DIR}/package/Dockerfile -t ${DOCKER_IMAGE_NAME}:${DOCKER_TAG} .
+docker/build: docker/build-server docker/build-client
+	@echo "$(GREEN)Both images built successfully!$(NC)"
 
-docker/run: docker/build
-	@echo "Running Docker container..."
-	docker run --rm -p 6660:6660 \
+docker/build-server:
+	@echo "$(YELLOW)Building backend Docker image...$(NC)"
+	docker build -f Dockerfile.server -t ${DOCKER_IMAGE_SERVER}:${DOCKER_TAG} .
+	@echo "$(GREEN)Backend image built: ${DOCKER_IMAGE_SERVER}:${DOCKER_TAG}$(NC)"
+
+docker/build-client:
+	@echo "$(YELLOW)Building frontend Docker image...$(NC)"
+	docker build -f Dockerfile.client -t ${DOCKER_IMAGE_CLIENT}:${DOCKER_TAG} .
+	@echo "$(GREEN)Frontend image built: ${DOCKER_IMAGE_CLIENT}:${DOCKER_TAG}$(NC)"
+
+docker/run: docker/build-server
+	@echo "Running backend Docker container only..."
+	docker run --rm -p 6660:6660 -p 6661:6661 \
 		-e ENV=development \
 		-e LOG_LEVEL=DEBUG \
 		-e DEFAULT_ELEVATOR_COUNT=3 \
-		--name ${DOCKER_IMAGE_NAME} \
-		${DOCKER_IMAGE_NAME}:${DOCKER_TAG}
+		--name ${DOCKER_IMAGE_SERVER} \
+		${DOCKER_IMAGE_SERVER}:${DOCKER_TAG}
 
 docker/compose:
-	@echo "Starting Docker Compose setup..."
-	@echo "Web interface: http://localhost:8080"
-	@echo "API: http://localhost:6660"
-	@echo "WebSocket: http://localhost:6661"
+	@echo "$(YELLOW)Starting Docker Compose setup (2 separate containers)...$(NC)"
+	@echo "React client (nginx): http://localhost:8080"
+	@echo "Backend API: http://localhost:6660"
+	@echo "Backend WebSocket: http://localhost:6661"
 	docker-compose up -d
+	@echo "$(GREEN)Services started! Access the app at http://localhost:8080$(NC)"
 
 docker/stop:
 	@echo "Stopping all Docker services..."
-	@docker stop ${DOCKER_IMAGE_NAME} 2>/dev/null || true
-	@docker rm ${DOCKER_IMAGE_NAME} 2>/dev/null || true
+	@docker stop ${DOCKER_IMAGE_SERVER} 2>/dev/null || true
+	@docker rm ${DOCKER_IMAGE_SERVER} 2>/dev/null || true
+	@docker stop ${DOCKER_IMAGE_CLIENT} 2>/dev/null || true
+	@docker rm ${DOCKER_IMAGE_CLIENT} 2>/dev/null || true
 	@docker-compose down 2>/dev/null || true
 	@docker-compose -f docker-compose.full.yml down 2>/dev/null || true
 	@docker system prune -f
@@ -202,14 +247,13 @@ lint/go:
 	@echo "$(GREEN)Go lint passed!$(NC)"
 
 lint/ts:
-	@echo "$(YELLOW)Running TypeScript/Svelte linters...$(NC)"
-	cd client && npm run lint
-	@echo "$(GREEN)TypeScript lint passed!$(NC)"
+	@echo "$(YELLOW)Running client (TypeScript) linters...$(NC)"
+	cd $(CLIENT_DIR) && npm run lint
+	@echo "$(GREEN)Client lint passed!$(NC)"
 
 lint/fix:
-	@echo "$(YELLOW)Auto-fixing TypeScript/Svelte lint issues...$(NC)"
-	cd client && npm run lint:fix
-	cd client && npm run format
+	@echo "$(YELLOW)Auto-fixing client lint issues...$(NC)"
+	cd $(CLIENT_DIR) && npm run lint -- --fix
 	@echo "$(GREEN)Lint fix complete!$(NC)"
 
 # Debug preparation (simplified)

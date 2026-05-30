@@ -1,26 +1,27 @@
 # Build stage
-FROM node:18-alpine AS builder
+FROM node:24-alpine AS builder
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package.json (package-lock.json excluded via .dockerignore to avoid private registry URLs)
+COPY package.json ./
 
-# Install dependencies
-RUN npm ci
+# Install ALL dependencies from public npm registry (need devDeps for build)
+RUN npm config set registry https://registry.npmjs.org/ && \
+    npm install
 
 # Copy source code
 COPY . .
 
-# Build the application
+# Build the application (Vite outputs to dist/)
 RUN npm run build
 
 # Production stage
 FROM nginx:alpine
 
 # Copy built files from builder stage
-COPY --from=builder /app/build /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
@@ -29,4 +30,4 @@ COPY nginx.conf /etc/nginx/nginx.conf
 EXPOSE 80
 
 # Start nginx
-CMD ["nginx", "-g", "daemon off;"] 
+CMD ["nginx", "-g", "daemon off;"]

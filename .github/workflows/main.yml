@@ -10,9 +10,9 @@ env:
   GO_VERSION: '1.25'
 
 jobs:
-  # Linting job - runs simultaneously with tests
-  lint:
-    name: Lint
+  # Backend linting job
+  lint-backend:
+    name: Lint Backend (Go)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -32,9 +32,38 @@ jobs:
         version: v2.10.1
         args: --timeout=5m
 
-  # Unit tests job - runs simultaneously with other tests
-  unit_tests:
-    name: Unit Tests
+  # Frontend linting job
+  lint-frontend:
+    name: Lint Frontend (TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: 'npm'
+        cache-dependency-path: client/package-lock.json
+
+    - name: Install client dependencies
+      working-directory: client
+      run: npm ci
+
+    - name: Run ESLint
+      working-directory: client
+      run: npm run lint
+
+    - name: Run TypeScript typecheck
+      working-directory: client
+      run: npm run typecheck
+
+  # Backend unit tests
+  unit_tests_backend:
+    name: Unit Tests (Backend)
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -48,7 +77,7 @@ jobs:
         go-version: ${{ env.GO_VERSION }}
         cache: true
 
-    - name: Run unit tests with coverage
+    - name: Run Go unit tests with coverage
       run: |
         go test -v -short -coverprofile=coverage.out $(go list ./internal/... ./cmd/...)
 
@@ -58,6 +87,31 @@ jobs:
       with:
         file: ./coverage.out
         fail_ci_if_error: false
+
+  # Frontend unit tests
+  unit_tests_frontend:
+    name: Unit Tests (Frontend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: 'npm'
+        cache-dependency-path: client/package-lock.json
+
+    - name: Install client dependencies
+      working-directory: client
+      run: npm ci
+
+    - name: Run client tests
+      working-directory: client
+      run: npm test
 
   # Race condition tests - runs simultaneously with other tests
   race_tests:
@@ -138,17 +192,17 @@ jobs:
         cache: true
 
     - name: Run acceptance tests
-      run: make test/acceptance
+      run: DEFAULT_ELEVATOR_COUNT=0 make test/acceptance
 
     - name: Run integration tests with testcontainers
       run: make test/integration
 
   # Build job - runs only after all tests pass
   build:
-    name: Build
+    name: Build & Docker
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: [lint, unit_tests, race_tests, integration_tests]
+    timeout-minutes: 20
+    needs: [lint-backend, lint-frontend, unit_tests_backend, unit_tests_frontend, race_tests, integration_tests]
 
     steps:
     - name: Checkout code
@@ -160,16 +214,33 @@ jobs:
         go-version: ${{ env.GO_VERSION }}
         cache: true
 
-    - name: Build binary
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: 'npm'
+        cache-dependency-path: client/package-lock.json
+
+    - name: Build Go binary
       run: make build
 
-    - name: Build Docker image
-      run: make docker/build
+    - name: Build backend Docker image
+      run: make docker/build-server
+
+    - name: Build frontend Docker image
+      run: make docker/build-client
+
+    - name: Verify images
+      run: |
+        docker images | grep elevator
+        echo "Backend image built: elevator-backend:latest"
+        echo "Frontend image built: elevator-frontend:latest"
 
     - name: Cleanup Docker resources
       if: always()
       run: |
-        docker rmi elevator-service:latest || true
+        docker rmi elevator-backend:latest || true
+        docker rmi elevator-frontend:latest || true
 
   # Benchmark tests - runs on each push
   benchmarks:
@@ -194,18 +265,26 @@ jobs:
   all-checks:
     name: All Checks Passed
     runs-on: ubuntu-latest
-    needs: [lint, unit_tests, race_tests, race_tests_full, integration_tests, build]
+    needs: [lint-backend, lint-frontend, unit_tests_backend, unit_tests_frontend, race_tests, race_tests_full, integration_tests, build]
     if: always()
 
     steps:
     - name: Check all jobs
       run: |
-        if [[ "${{ needs.lint.result }}" != "success" ]]; then
-          echo "Lint job failed"
+        if [[ "${{ needs.lint-backend.result }}" != "success" ]]; then
+          echo "Backend lint job failed"
           exit 1
         fi
-        if [[ "${{ needs.unit_tests.result }}" != "success" ]]; then
-          echo "Unit tests failed"
+        if [[ "${{ needs.lint-frontend.result }}" != "success" ]]; then
+          echo "Frontend lint job failed"
+          exit 1
+        fi
+        if [[ "${{ needs.unit_tests_backend.result }}" != "success" ]]; then
+          echo "Backend unit tests failed"
+          exit 1
+        fi
+        if [[ "${{ needs.unit_tests_frontend.result }}" != "success" ]]; then
+          echo "Frontend unit tests failed"
           exit 1
         fi
         if [[ "${{ needs.race_tests.result }}" != "success" ]]; then

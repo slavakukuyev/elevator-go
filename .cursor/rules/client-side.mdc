@@ -1,6 +1,0 @@
----
-description:
-globs:
-alwaysApply: false
----
-Must use [client_rules.md](mdc:docs/client_rules.md)

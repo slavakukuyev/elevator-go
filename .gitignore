@@ -32,6 +32,10 @@ out/
 .DS_Store
 *.exe
 
+# AI assistant / editor config
+.claude/
+.cursor/
+
 # Node.js dependencies
 node_modules/
 npm-debug.log*
@@ -41,14 +45,14 @@ yarn-error.log*
 # package-lock.json
 yarn.lock
 
-# SvelteKit build artifacts
-client/.svelte-kit/
+# Client (React/Vite) build artifacts
 client/dist/
-client/build/
+*.tsbuildinfo
 
 # Build outputs
 /dist/
 /out/
+build/bin/
 
 # Logs
 *.log

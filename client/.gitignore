@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Logs
+*.log
+
+# Local env overrides
+.env.local
+.env.*.local
+
+# Editor / OS
+.DS_Store
+
+# AI assistant / editor config
+.claude/
+.cursor/
