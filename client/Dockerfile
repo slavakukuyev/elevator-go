@@ -1,14 +1,15 @@
 # Build stage
-FROM node:18-alpine AS builder
+FROM node:24-alpine AS builder
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package.json (package-lock.json excluded via .dockerignore to avoid private registry URLs)
+COPY package.json ./
 
-# Install dependencies
-RUN npm ci
+# Install ALL dependencies from public npm registry (need devDeps for build)
+RUN npm config set registry https://registry.npmjs.org/ && \
+    npm install
 
 # Copy source code
 COPY . .

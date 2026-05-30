@@ -33,7 +33,7 @@ func TestElevatorServiceIntegration(t *testing.T) {
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
 			Context:    "../..", // Go up two levels to project root
-			Dockerfile: "build/package/Dockerfile",
+			Dockerfile: "Dockerfile.server",
 		},
 		ExposedPorts: []string{"6660/tcp"},
 		Env: map[string]string{
@@ -309,7 +309,7 @@ func TestContainerizedSystemWorkflow(t *testing.T) {
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
 			Context:    "../..",
-			Dockerfile: "build/package/Dockerfile",
+			Dockerfile: "Dockerfile.server",
 		},
 		ExposedPorts: []string{"6660/tcp"},
 		Env: map[string]string{

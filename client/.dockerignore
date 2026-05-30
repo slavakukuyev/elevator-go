@@ -7,3 +7,5 @@ dist
 *.log
 .claude/
 .cursor/
+# Exclude package-lock to avoid private registry URLs during Docker build
+package-lock.json

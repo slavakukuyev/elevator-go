@@ -5,7 +5,8 @@ PKGS=./...
 UNIT_PKGS=$(shell go list ./internal/... ./cmd/...)
 
 # Docker configuration
-DOCKER_IMAGE_NAME=elevator-service
+DOCKER_IMAGE_SERVER=elevator-backend
+DOCKER_IMAGE_CLIENT=elevator-frontend
 DOCKER_TAG=latest
 BUILD_DIR=build
 
@@ -54,9 +55,11 @@ help:
 	@echo "  dev/local           - Run backend + client locally"
 	@echo ""
 	@echo "$(YELLOW)Docker:$(NC)"
-	@echo "  docker/build        - Build Docker image"
+	@echo "  docker/build        - Build both Docker images (server + client)"
+	@echo "  docker/build-server - Build backend image only"
+	@echo "  docker/build-client - Build frontend image only"
 	@echo "  docker/run          - Run container (backend only)"
-	@echo "  docker/compose      - Run full compose setup"
+	@echo "  docker/compose      - Run full compose setup (2 containers)"
 	@echo "  docker/stop         - Stop and clean Docker containers"
 	@echo "  dev/full            - Run backend (Docker) + client (dev mode)"
 	@echo "  dev/backend         - Run backend in Docker only"
@@ -161,32 +164,44 @@ dev/stop:
 	$(call cleanup_ports,$(ALL_PORTS))
 
 # Docker targets
-.PHONY: docker/build docker/run docker/compose docker/stop
+.PHONY: docker/build docker/build-server docker/build-client docker/run docker/compose docker/stop
 
-docker/build:
-	@echo "Building Docker image..."
-	docker build -f ${BUILD_DIR}/package/Dockerfile -t ${DOCKER_IMAGE_NAME}:${DOCKER_TAG} .
+docker/build: docker/build-server docker/build-client
+	@echo "$(GREEN)Both images built successfully!$(NC)"
 
-docker/run: docker/build
-	@echo "Running Docker container..."
-	docker run --rm -p 6660:6660 \
+docker/build-server:
+	@echo "$(YELLOW)Building backend Docker image...$(NC)"
+	docker build -f Dockerfile.server -t ${DOCKER_IMAGE_SERVER}:${DOCKER_TAG} .
+	@echo "$(GREEN)Backend image built: ${DOCKER_IMAGE_SERVER}:${DOCKER_TAG}$(NC)"
+
+docker/build-client:
+	@echo "$(YELLOW)Building frontend Docker image...$(NC)"
+	docker build -f Dockerfile.client -t ${DOCKER_IMAGE_CLIENT}:${DOCKER_TAG} .
+	@echo "$(GREEN)Frontend image built: ${DOCKER_IMAGE_CLIENT}:${DOCKER_TAG}$(NC)"
+
+docker/run: docker/build-server
+	@echo "Running backend Docker container only..."
+	docker run --rm -p 6660:6660 -p 6661:6661 \
 		-e ENV=development \
 		-e LOG_LEVEL=DEBUG \
 		-e DEFAULT_ELEVATOR_COUNT=3 \
-		--name ${DOCKER_IMAGE_NAME} \
-		${DOCKER_IMAGE_NAME}:${DOCKER_TAG}
+		--name ${DOCKER_IMAGE_SERVER} \
+		${DOCKER_IMAGE_SERVER}:${DOCKER_TAG}
 
 docker/compose:
-	@echo "Starting Docker Compose setup..."
-	@echo "Web interface: http://localhost:8080"
-	@echo "API: http://localhost:6660"
-	@echo "WebSocket: http://localhost:6661"
+	@echo "$(YELLOW)Starting Docker Compose setup (2 separate containers)...$(NC)"
+	@echo "React client (nginx): http://localhost:8080"
+	@echo "Backend API: http://localhost:6660"
+	@echo "Backend WebSocket: http://localhost:6661"
 	docker-compose up -d
+	@echo "$(GREEN)Services started! Access the app at http://localhost:8080$(NC)"
 
 docker/stop:
 	@echo "Stopping all Docker services..."
-	@docker stop ${DOCKER_IMAGE_NAME} 2>/dev/null || true
-	@docker rm ${DOCKER_IMAGE_NAME} 2>/dev/null || true
+	@docker stop ${DOCKER_IMAGE_SERVER} 2>/dev/null || true
+	@docker rm ${DOCKER_IMAGE_SERVER} 2>/dev/null || true
+	@docker stop ${DOCKER_IMAGE_CLIENT} 2>/dev/null || true
+	@docker rm ${DOCKER_IMAGE_CLIENT} 2>/dev/null || true
 	@docker-compose down 2>/dev/null || true
 	@docker-compose -f docker-compose.full.yml down 2>/dev/null || true
 	@docker system prune -f
