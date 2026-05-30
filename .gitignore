@@ -32,6 +32,10 @@ out/
 .DS_Store
 *.exe
 
+# AI assistant / editor config
+.claude/
+.cursor/
+
 # Node.js dependencies
 node_modules/
 npm-debug.log*

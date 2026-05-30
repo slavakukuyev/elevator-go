@@ -16,3 +16,7 @@ dist/
 
 # Editor / OS
 .DS_Store
+
+# AI assistant / editor config
+.claude/
+.cursor/
