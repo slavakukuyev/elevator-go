@@ -49,6 +49,7 @@ client/build/
 # Build outputs
 /dist/
 /out/
+build/bin/
 
 # Logs
 *.log

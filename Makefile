@@ -12,7 +12,12 @@ BUILD_DIR=build
 # Port configuration
 BACKEND_PORTS=6660,6661
 CLIENT_PORT=5173
-ALL_PORTS=$(BACKEND_PORTS),$(CLIENT_PORT)
+REACT_CLIENT_PORT=5174
+ALL_PORTS=$(BACKEND_PORTS),$(CLIENT_PORT),$(REACT_CLIENT_PORT)
+
+# Client directories
+CLIENT_DIR=client
+REACT_CLIENT_DIR=client-react
 
 # Colors for output
 GREEN=\033[0;32m
@@ -39,10 +44,21 @@ help:
 	@echo "  clean               - Clean build artifacts"
 	@echo "  run                 - Build and run the elevator server"
 	@echo ""
-	@echo "$(YELLOW)Development:$(NC)"
-	@echo "  dev/client          - Run client in dev mode only"
-	@echo "  dev/local           - Run both backend and client locally"
+	@echo "$(YELLOW)Development (Svelte client):$(NC)"
+	@echo "  dev/client          - Run Svelte client in dev mode only (port 5173)"
+	@echo "  dev/local           - Run backend + Svelte client locally"
 	@echo "  server-dev          - Run backend server locally"
+	@echo ""
+	@echo "$(YELLOW)Development (React client — client-react/):$(NC)"
+	@echo "  react/install       - Install React client dependencies"
+	@echo "  react/dev           - Run React client in dev mode only (port 5174)"
+	@echo "  react/build         - Production build of the React client"
+	@echo "  react/test          - Run React client unit tests (vitest)"
+	@echo "  react/typecheck     - Typecheck the React client (tsc)"
+	@echo "  react/lint          - Lint the React client (eslint)"
+	@echo "  react/lint/fix      - Auto-fix React client lint + format"
+	@echo "  react/check         - typecheck + lint + test (full gate)"
+	@echo "  dev/react           - Run backend + React client locally"
 	@echo ""
 	@echo "$(YELLOW)Docker:$(NC)"
 	@echo "  docker/build        - Build Docker image"
@@ -62,10 +78,11 @@ help:
 	@echo "  test/all            - Run all tests"
 	@echo ""
 	@echo "$(YELLOW)Lint:$(NC)"
-	@echo "  lint                - Run all linters (Go + TypeScript)"
+	@echo "  lint                - Run all linters (Go + Svelte + React)"
 	@echo "  lint/go             - Run golangci-lint on Go files"
-	@echo "  lint/ts             - Run ESLint on TypeScript/Svelte files"
-	@echo "  lint/fix            - Auto-fix TS/Svelte lint + format"
+	@echo "  lint/ts             - Run ESLint on Svelte client"
+	@echo "  lint/fix            - Auto-fix Svelte client lint + format"
+	@echo "  react/lint          - Run ESLint on React client"
 	@echo ""
 	@echo "$(YELLOW)Utilities:$(NC)"
 	@echo "  cleanup             - Clean up all ports and processes"
@@ -85,7 +102,8 @@ run: build_server
 	./${BIN_PATH}/${BIN_NAME}
 
 # Development targets
-.PHONY: cleanup server-dev client-dev dev/full dev/backend dev/client dev/local dev/stop
+.PHONY: cleanup server-dev client-dev dev/full dev/backend dev/client dev/local dev/stop \
+        react/install react/dev react/build react/test react/typecheck react/lint react/lint/fix react/check dev/react
 
 # Unified cleanup target
 cleanup:
@@ -124,6 +142,48 @@ dev/local:
 	@echo "Waiting for backend to be ready..."
 	@sleep 5
 	@make client-dev
+
+# React client targets (client-react/) -------------------------------------
+react/install:
+	@echo "$(YELLOW)Installing React client dependencies...$(NC)"
+	cd $(REACT_CLIENT_DIR) && npm install
+
+react/dev:
+	$(call cleanup_ports,$(REACT_CLIENT_PORT))
+	@echo "Starting React client dev server on port $(REACT_CLIENT_PORT)..."
+	cd $(REACT_CLIENT_DIR) && npm run dev
+
+react/build:
+	@echo "$(YELLOW)Building React client...$(NC)"
+	cd $(REACT_CLIENT_DIR) && npm run build
+	@echo "$(GREEN)React client build complete!$(NC)"
+
+react/test:
+	@echo "$(YELLOW)Running React client unit tests...$(NC)"
+	cd $(REACT_CLIENT_DIR) && npm run test
+
+react/typecheck:
+	@echo "$(YELLOW)Typechecking React client...$(NC)"
+	cd $(REACT_CLIENT_DIR) && npm run typecheck
+
+react/lint:
+	@echo "$(YELLOW)Linting React client...$(NC)"
+	cd $(REACT_CLIENT_DIR) && npm run lint
+	@echo "$(GREEN)React client lint passed!$(NC)"
+
+react/lint/fix:
+	@echo "$(YELLOW)Auto-fixing React client lint + format...$(NC)"
+	cd $(REACT_CLIENT_DIR) && npm run lint -- --fix
+
+react/check: react/typecheck react/lint react/test
+	@echo "$(GREEN)React client quality gate passed!$(NC)"
+
+dev/react:
+	@echo "Starting backend + React client locally..."
+	@make server-dev &
+	@echo "Waiting for backend to be ready..."
+	@sleep 5
+	@make react/dev
 
 dev/stop:
 	@echo "Stopping all development services..."
@@ -194,7 +254,7 @@ test/all: test/unit test/race test/acceptance test/integration
 # Lint targets
 .PHONY: lint lint/go lint/ts lint/fix
 
-lint: lint/go lint/ts
+lint: lint/go lint/ts react/lint
 
 lint/go:
 	@echo "$(YELLOW)Running Go linters...$(NC)"
@@ -219,4 +279,5 @@ debug-prepare: cleanup
 	@echo "Available ports:"
 	@echo "  - HTTP API: 6660"
 	@echo "  - WebSocket: 6661"
-	@echo "  - Client: 5173"
+	@echo "  - Svelte client: 5173"
+	@echo "  - React client: 5174"
