@@ -1,5 +1,7 @@
 # Client-Side API Refactoring
 
+**Note**: This document describes **historical fixes to the legacy Svelte client** (`client/` directory). The React rebuild ([client-react.md](client-react.md)) addressed these issues from the ground up with a unified mapper.
+
 ## Overview
 This document outlines the refactoring changes made to the client-side code to properly integrate with the backend API without modifying the backend.
 

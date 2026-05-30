@@ -1,8 +1,10 @@
-# Elevator Control System - Client Side Documentation
+# Elevator Control System - Svelte Client Documentation
 
 ## 🏗️ Overview
 
-The client-side application is a modern, responsive web interface for the Elevator Control System built with SvelteKit, TypeScript, and Tailwind CSS. It provides real-time visualization of elevator operations, intuitive controls for floor selection, and comprehensive monitoring capabilities.
+**Note**: This document describes the **legacy Svelte client** (`client/` directory, port 5173). For the React rebuild, see [client-react.md](client-react.md).
+
+The Svelte client is a modern, responsive web interface for the Elevator Control System built with SvelteKit, TypeScript, and Tailwind CSS. It provides real-time visualization of elevator operations, intuitive controls for floor selection, and comprehensive monitoring capabilities.
 
 ## Project custom rules
 * always use the same port 5173 for web page appliaction.

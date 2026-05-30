@@ -1,5 +1,7 @@
 # Frontend Design Specification (Updated with Modern Recommendations)
 
+**Note**: This document describes the **legacy Svelte client** design (`client/` directory). For the React rebuild architecture, see [client-react.md](client-react.md).
+
 ## 🏗️ Overview
 
 This document outlines the design for a modern, interactive frontend for the Elevator Control System that will be deployed as a lightweight static application on GitHub Pages. The frontend provides real-time visualization of elevator operations, intelligent touch display interfaces for floor selection, and comprehensive monitoring capabilities, all built with modern best practices for performance, accessibility, and developer experience.
