@@ -43,13 +43,13 @@ services:
     networks:
       - elevator-network
 
-  # Svelte Frontend Client
+  # React Frontend Client
   frontend:
     build:
       context: ./client
       dockerfile: Dockerfile
     ports:
-      - "3000:80"  # Svelte client on port 3000
+      - "3000:80"  # React client on port 3000
     depends_on:
       backend:
         condition: service_healthy

@@ -13,23 +13,23 @@ From this directory:
 
 ```bash
 npm install
-npm run dev        # dev server on http://localhost:5174
+npm run dev        # dev server on http://localhost:5173
 ```
 
 From the repo root (recommended):
 
 ```bash
-make react/install
-make dev/react     # starts backend + React client together
+make client-install
+make dev/local     # starts backend + client together
 ```
 
-The app will be available at **http://localhost:5174**.
+The app will be available at **http://localhost:5173**.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Dev server on port 5174 |
+| `npm run dev` | Dev server on port 5173 |
 | `npm run build` | Typecheck + production build → `dist/` |
 | `npm run test` | Vitest unit tests |
 | `npm run lint` | ESLint |
@@ -38,22 +38,23 @@ The app will be available at **http://localhost:5174**.
 Or use the Makefile from the repo root:
 
 ```bash
-make react/dev          # dev server
-make react/build        # production build
-make react/test         # tests
-make react/lint         # lint
-make react/check        # full check (typecheck + lint + test)
+make client-dev         # dev server
+make client-build       # production build
+make client-test        # tests
+make lint/ts            # lint
+make client-check       # full check (typecheck + lint + test)
 ```
 
 ## Architecture & Design
 
-See **[docs/client-react.md](../docs/client-react.md)** for:
+See **[docs/client.md](../docs/client.md)** for:
 - Feature-sliced architecture details
 - The WebSocket seam (`useBuildingLiveState`)
 - Stack choices (React 19, TanStack Query, Zustand)
 - Backend contract (REST + WebSocket API)
-- Feature parity vs. the legacy Svelte client
 
-## Legacy Svelte Client
+## History
 
-The original Svelte client (`../client`) is untouched and runs on port 5173. Both clients work side by side.
+This React client replaced the original Svelte client. The Svelte implementation
+is recoverable from git history at commit `8da68df` (the last commit before the
+React rebuild landed).

@@ -1,6 +1,8 @@
 # Elevator Control System
 
-A Go-based elevator control system with real-time WebSocket updates and modern web frontends (Svelte + React).
+A Go-based elevator control system with real-time WebSocket updates and a modern React web frontend.
+
+> **Note:** The original Svelte client was replaced by the React client. The Svelte implementation is recoverable from git history at commit `8da68df` (the last commit before the React rebuild landed).
 
 ## Table of Contents
 
@@ -62,8 +64,7 @@ A Go-based elevator control system with real-time WebSocket updates and modern w
 - **Circuit Breaker**: Fault tolerance implementation for elevator operations
 
 ### Frontend
-- **React Client** (`client-react/`): Modern React 19 + TypeScript + TanStack Query rebuild (Project 1 of SaaS north-star) — see [docs/client-react.md](docs/client-react.md)
-- **Svelte Client** (`client/`): Legacy SvelteKit frontend (still functional) — see [docs/client_side.md](docs/client_side.md)
+- **React Client** (`client/`): Modern React 19 + TypeScript + Vite + TanStack Query + Zustand (Project 1 of SaaS north-star) — see [docs/client.md](docs/client.md)
 - **Real-time Visualization**: Live elevator position and state updates via WebSocket
 - **Control Panel**: Elevator creation and floor request management
 - **Monitoring Dashboard**: System metrics and health status
@@ -116,8 +117,8 @@ A Go-based elevator control system with real-time WebSocket updates and modern w
 - **Structured logging** with slog
 
 #### Frontend
-- **React 19** + TypeScript + Vite (React client, `client-react/`)
-- **Svelte 4** + TypeScript + Vite (legacy client, `client/`)
+- **React 19** + TypeScript + Vite (client, `client/`)
+- **TanStack Query** for server state, **Zustand** for live state
 - **Tailwind CSS** for styling
 - **WebSocket** client for real-time updates
 
@@ -144,16 +145,13 @@ cd elevator
 # Backend only
 make server-dev
 
-# Svelte client only (legacy)
+# Client only (dev server on port 5173)
 make client-dev
 
-# React client only
-make react/dev
+# Full stack: backend + client locally (recommended)
+make dev/local
 
-# Full stack: backend + React client
-make dev/react
-
-# Full stack: backend in Docker + Svelte client dev
+# Full stack: backend in Docker + client dev
 make dev/full
 ```
 
@@ -239,8 +237,7 @@ elevator/
 │   ├── http/           # HTTP server and API handlers
 │   ├── domain/         # Business logic and types
 │   └── infra/          # Infrastructure and configuration
-├── client/             # Svelte frontend (legacy, port 5173)
-├── client-react/       # React frontend (Project 1, port 5174)
+├── client/             # React frontend (React 19 + Vite, port 5173)
 ├── configs/            # Environment-specific configurations
 ├── tests/              # Test suites and utilities
 └── docs/               # Documentation
@@ -365,7 +362,7 @@ GET /v1/metrics
 
 ### Code Quality
 - **Linting**: `make lint` (Go + TypeScript), `make lint/go`, `make lint/ts`
-- **Formatting**: `make lint/fix` (auto-fix TS/Svelte/React + Prettier)
+- **Formatting**: `make lint/fix` (auto-fix client lint issues)
 - **Testing**: Comprehensive test suites
 - **Documentation**: GoDoc comments, `docs/` folder
 

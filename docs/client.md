@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is **Project 1** of the SaaS north-star plan ([specs/2026-05-30-elevator-saas-north-star-design.md](superpowers/specs/2026-05-30-elevator-saas-north-star-design.md)): a single-building, frontend-only rebuild that leaves the Go backend untouched. The React client is a redesigned, maintainable replacement for the legacy Svelte client, running on a separate dev port so both can coexist during the transition.
+This is **Project 1** of the SaaS north-star plan ([specs/2026-05-30-elevator-saas-north-star-design.md](superpowers/specs/2026-05-30-elevator-saas-north-star-design.md)): a single-building, frontend-only rebuild that leaves the Go backend untouched. The React client (`client/`) is a redesigned, maintainable replacement for the original Svelte client, which has been removed (recoverable from git history at commit `8da68df`).
 
 ## Stack
 
@@ -16,7 +16,7 @@ This is **Project 1** of the SaaS north-star plan ([specs/2026-05-30-elevator-sa
 ## Architecture (Feature-Sliced Design)
 
 ```
-client-react/src/
+client/src/
   app/
     App.tsx             router-free shell, providers, layout
     Header.tsx          connection status, theme toggle, create button
@@ -176,7 +176,7 @@ The CSS `top` transition animates the elevator car between snapshots.
 - **Vitest**: test runner
 - **@testing-library/react**: component test utilities (future)
 
-Run: `npm run test` or `make react/test`
+Run: `npm run test` or `make client-test`
 
 ## Configuration
 
@@ -200,14 +200,12 @@ When we go multi-building:
 
 ## Deployment
 
-- **Dev**: `make dev/react` (backend + React client)
-- **Production**: `make react/build` → `dist/` (static SPA, nginx or GitHub Pages)
-- **Legacy Svelte**: runs on `:5173` — both clients work side by side during transition
+- **Dev**: `make dev/local` (backend + client; dev server on `:5173`)
+- **Production**: `make client-build` → `dist/` (static SPA, nginx or GitHub Pages); the `frontend` service in `docker-compose.full.yml` builds `client/Dockerfile` and serves the SPA via nginx
 
 ## Related Docs
 
 - [elevator.md](elevator.md) — SCAN/LOOK algorithm, elevator movement
 - [manager.md](manager.md) — fleet coordination, 3-phase selection
 - [elevator_deletion.md](elevator_deletion.md) — graceful delete behavior
-- [client_side.md](client_side.md) — legacy Svelte client (still functional)
 - [superpowers/specs/2026-05-30-elevator-saas-north-star-design.md](superpowers/specs/2026-05-30-elevator-saas-north-star-design.md) — full SaaS roadmap

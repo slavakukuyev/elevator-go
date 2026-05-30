@@ -41,10 +41,9 @@ yarn-error.log*
 # package-lock.json
 yarn.lock
 
-# SvelteKit build artifacts
-client/.svelte-kit/
+# Client (React/Vite) build artifacts
 client/dist/
-client/build/
+*.tsbuildinfo
 
 # Build outputs
 /dist/

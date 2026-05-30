@@ -13,8 +13,8 @@ make test/acceptance     # E2E tests
 make test/all            # Full suite
 make lint                # Go + TypeScript linters
 make lint/go             # golangci-lint
-make lint/ts             # ESLint on .ts/.svelte
-make lint/fix            # Auto-fix TS + Prettier
+make lint/ts             # ESLint on the React client (.ts/.tsx)
+make lint/fix            # Auto-fix client lint issues
 make docker/compose      # Full stack via nginx (port 8080)
 make cleanup             # Kill ports 6660, 6661, 5173
 ```
@@ -28,7 +28,7 @@ Clean Architecture: **Handlers → Manager → Elevator → Domain** (unidirecti
 - `internal/http/` — REST `/v1/`, WebSocket `/ws/status`
 - `internal/domain/` — types and interfaces
 - `internal/infra/` — config, observability, logging
-- `client/` — Svelte 4 + TypeScript + Tailwind
+- `client/` — React 19 + TypeScript + Vite + Tailwind + TanStack Query + Zustand → [`docs/client.md`](docs/client.md)
 
 ## API Endpoints
 

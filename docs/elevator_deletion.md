@@ -71,9 +71,10 @@ Prevents zombie elevators stuck in "Deleting" forever.
 | `internal/elevator/elevator.go` | `isDeleting atomic.Bool`, `MarkForDeletion()`, `CanAcceptRequests()`, `GetStatus()` |
 | `internal/manager/manager.go` | `DeleteElevator()` — atomic check+mark, `waitForElevatorToFinish()`, force-remove |
 | `internal/domain/elevator_status.go` | `ElevatorStatus.IsDeleting` field, JSON `is_deleting` |
-| `client/src/utils/floorSelection.ts` | Filters `isDeleting` elevators from routing |
-| `client/src/services/websocket.ts` | Maps `is_deleting` → `status: 'deleting'` |
-| `client/src/components/elevator/ElevatorBuilding.svelte` | "Deleting..." badge, confirm dialog |
+| `client/src/shared/api/mapper.ts` | Maps wire `is_deleting` → domain `status: 'deleting'` |
+| `client/src/features/building/domain/floors.ts` | Filters `deleting` elevators from routing |
+| `client/src/features/building/components/ElevatorShaft.tsx` | "Deleting..." badge |
+| `client/src/shared/ui/ConfirmDialog.tsx` | Accessible delete confirmation dialog |
 
 ## API
 
